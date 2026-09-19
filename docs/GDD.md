@@ -1,0 +1,370 @@
+# Idle Strike 2 — Game Design Document
+
+Versão 0.1 — 19/09/2026. Documento vivo. Números marcados com `[v0]` são valores iniciais de balanceamento e devem ser ajustados via simulação em massa.
+
+---
+
+## 1. Visão
+
+**Tese:** CS pra quem não pode abrir o CS agora. Mac, celular, trabalho, ônibus, PC quebrado.
+
+**Fantasia:** você é um jogador de CS. Cria seu boneco no nível 0, treina, joga 5x5, evolui atributos, monta build de cartas, sobe patente, sobe no ranking de rating, coleciona skins. A meta é ser o melhor jogador de CS do jogo.
+
+**Pilares**
+1. **Respeito ao CS.** Economia real, roles reais, rating estilo HLTV, patente. O jogador conhece o jogo — nada pode soar errado pra ele.
+2. **Sim assistível.** A partida é simulada, mas *assistir* tem que ser bom: tela HLTV Live com radar, kill feed, scoreboard, economia, drama de round.
+3. **Progressão de boneco com build.** Barras (base) + cartas (perks) + classes que misturam. A comunidade discute meta de build.
+4. **Idle honesto.** O jogo anda sem você (bonecos passivos jogam online), mas presença rende mais. Nunca "número sobe sozinho".
+5. **Cosmético com palco.** Skins aparecem no kill feed, scoreboard, perfil. Só cosmético é vendido.
+
+**Referências de UI:** FACEIT (lobby, perfil, ladder), HLTV Live (tela de partida). Escuro, denso, informativo. Sem cartoon.
+
+**Não é:** manager de org (descartado por enquanto), jogo de reflexo, idle clicker.
+
+---
+
+## 2. Loop principal
+
+```
+criar boneco → box inicial
+   ↓
+treino / DM  ──→ barras de atributo sobem (base, lento, cap por lvl)
+   ↓
+queue 5x5 solo (bots)  ──→ XP, box de cartas, cosmético   [não sobe barra]
+   ↓
+queue 5x5 online        ──→ XP↑, drops↑, patente (MMR), rating (ranking)
+   ↓
+inventário: cartas → build, cosméticos → equipar/coleção
+   ↓ (volta)
+```
+
+**Sessão típica:** 1 treino (3 min) + 1–2 partidas (6–8 min cada) + abrir box + mexer na build. 15–25 min.
+
+**Meta de longo prazo:** rating no topo do ranking → orgs de paródia oferecem contrato (Fase 3).
+
+---
+
+## 3. O boneco
+
+### 3.1 Identidade
+- Nick, avatar (escolha de retrato original), país/bandeira, mão (cosmético).
+- Nível (XP) — 0 a 50 `[v0]`. Desbloqueia slots de carta, modos, caps de atributo.
+- Patente — MMR online, faixas estilo CS/FACEIT (10 níveis `[v0]`). Reseta por temporada.
+- Rating de carreira — acumula. Rating recente (últimos 10 jogos) define **forma**.
+
+### 3.2 Atributos (0–100)
+| Atributo | O que faz no sim |
+|---|---|
+| **Mira** | chance de vencer duelo, chance de HS, multi-kill |
+| **Movimentação** | sobreviver a duelo perdido (recuar), chegar primeiro em posição, esquiva em rush |
+| **Peek** | vantagem quando *inicia* o duelo (entry, refrag), timing |
+| **Tático** | qualidade das calls (se IGL), escolha de posição, save/força correto, sobrevivência em rotação |
+| **Utilitária** | efetividade de flash/smoke/molotov: reduz mira/peek do inimigo no duelo, abre site |
+| **Mental** | clutch, resistência a tilt; oscila durante a partida (ver 5.6) |
+
+Cap por nível `[v0]`: `cap = 40 + lvl × 1.2` (lvl 0 → 40, lvl 50 → 100).
+
+### 3.3 Classes
+Classe **não é atributo**: é *como o sim usa o boneco* — em quais duelos ele entra, em qual ordem, com qual arma. Classe vem das cartas equipadas (bônus de conjunto, ver 6.3). Sem conjunto ativo, o boneco é **Rifler**.
+
+| Classe | Comportamento no sim | Atributo-chave |
+|---|---|---|
+| **Entry Fragger** | primeiro duelo do round no ataque; alta exposição | Peek, Mira |
+| **IGL** | define a estratégia do round pro time; poucos duelos; call quality | Tático |
+| **AWPer** | compra AWP quando o dinheiro permite; duelos de longa distância; pouca exposição | Mira, Movimentação |
+| **Âncora** | segura o site na defesa; raramente duela no meio do round; alta sobrevivência; retake fraco | Tático, Mental |
+| **Rifler** | padrão; duelos de meio; segundo contato | equilibrado |
+| **Support** | joga utilitária pro time; buffa o Entry; poucos kills, muitos assists | Utilitária |
+| **Star Player** | wildcard: pega o duelo mais favorável disponível no round; ignora role do time | Mira, Mental |
+
+Um time precisa de composição: sem IGL, `Tático` efetivo do time cai `[v0: −15%]`. Dois AWPers = só um compra.
+
+### 3.4 Build efetiva
+`atributo_efetivo = base (barra) + Σ bônus planos das cartas + modificadores situacionais (cartas condicionais, forma, utilitária inimiga)`. Sempre clamp 0–100 no momento do duelo.
+
+---
+
+## 4. Modos de jogo
+
+| Modo | Sobe barra | XP | Drop | Patente/Rating | Server |
+|---|---|---|---|---|---|
+| **Treino** | sim (forte) | baixo | cosmético raro | não | não |
+| **Deathmatch** | sim (Mira, Peek, Movimentação) | baixo | cosmético raro | não | não |
+| **Queue 5x5 solo** | **não** | médio | box de cartas | não | não |
+| **Queue 5x5 online** | **não** | alto | box de cartas↑ + cosmético | sim | sim (Fase 2) |
+
+### 4.1 Treino
+Sessão de ~3 min. Jogador escolhe 1 atributo foco (não Mental). Minigame correspondente opcional (ex.: Mira → alvos; Utilitária → lineup de smoke, acertar o ponto). Ganho de barra `[v0]`:
+- Base: `+0.8` no atributo foco, `+0.2` num secundário aleatório.
+- Minigame: multiplica por 1.0 (não jogou) até 1.5 (perfect).
+- **Rendimento decrescente diário:** sessões 1–3 do dia rendem 100%, 4–6 rendem 40%, 7+ rendem 10%. Reset às 00:00 local. Sem "energia" visível — mostra apenas "rendimento: alto / médio / baixo".
+- Ganho é reduzido conforme se aproxima do cap: `ganho × (1 − (atual/cap)^2)`.
+
+### 4.2 Deathmatch
+Sessão de ~4 min, minigame de mira mais intenso, ganho espalhado em Mira/Peek/Movimentação. Mesma regra de rendimento decrescente (compartilhada com Treino). Serve como o "treino rápido".
+
+### 4.3 Queue 5x5 solo
+Partida completa contra 9 bots nivelados. Nivelamento: bots recebem atributos `≈ média do jogador ± 8` `[v0]`, com classes distribuídas (1 IGL, 1 AWPer, 1 Entry, 2 Rifler/Âncora). Dificuldade não tem seletor — vem do nível/atributos.
+
+Recompensa (ver 8) — XP e box de cartas. **Não sobe barra.**
+
+### 4.4 Queue 5x5 online (Fase 2)
+**Assíncrono.** Ao entrar na queue, o servidor monta o 5x5 com **bonecos de jogadores reais** de MMR próximo (presentes ou não), completa com bots nivelados se faltar, simula com seed, grava. O cliente reproduz o log.
+
+- Boneco **presente** (dono na partida): MMR e rating cheios, recompensa cheia.
+- Boneco **passivo** (recrutado sem o dono online): joga com atributos e build reais; rating conta com peso 0.5; MMR não muda; dono recebe XP pequeno e notificação ("seu boneco jogou 3 partidas: 1.14 de rating").
+- Bot: não gera nada pra ninguém.
+
+Lobby ao vivo com amigos = Fase 4.
+
+---
+
+## 5. Motor de simulação
+
+### 5.1 Princípios
+- Determinístico por seed. `simulateMatch(config, seed) → MatchLog`.
+- MR12 (primeiro a 13, overtime MR3 em 12–12) `[v0]`. Mapa fixo por partida.
+- A partida é resolvida inteira de uma vez; o app reproduz o log.
+- Toda decisão passa por atributos + Rng. Nenhum "script".
+
+### 5.2 Entidades
+```ts
+Player { id, nick, attrs: {mira, mov, peek, tatico, util, mental}, class, build, cosmetics, team: 'CT'|'T', money, alive, weapon, armor, utils[] }
+Team   { id, players[5], score, money[], lossStreak, igl?: Player }
+Map    { id, name, sites: ['A','B'], areas[], routes[], radar: {w,h,...} }
+MatchConfig { map, teams[2], mr: 12, seedPlayers?: boolean }
+```
+
+### 5.3 Fluxo do round
+1. **Compra** — cada jogador decide por dinheiro do time + classe + IGL (5.4).
+2. **Call** — IGL do T escolhe estratégia: `rush A | rush B | split A | split B | default | fake`. IGL do CT escolhe setup: `padrão | stack A | stack B | agressivo`. Qualidade da call = `Tático` do IGL (sem IGL: random com viés ruim).
+3. **Fase inicial (0–40s)** — contatos iniciais: Entries e agressivos do CT geram 0–2 duelos de "mapa" (mid, abertura).
+4. **Execução (40–75s)** — T entra no site escolhido. Duelos sequenciais conforme classes: Entry → Rifler → Star; defesa: Âncora e Rifler do site, Support joga util (reduz atributos dos atacantes).
+5. **Plant / Pós-plant** — se T dominou o site, planta (Support ou Rifler). CT rotaciona (chegada depende de `Movimentação` + `Tático`) e faz retake: duelos com bônus de posição pro T.
+6. **Fim** — bomba explode / defuse / eliminação / tempo (1:55). Dinheiro atualizado.
+7. **Clutch** — se resta 1 vs N, cada duelo usa `Mental` como modificador principal (5.6).
+
+Cada duelo gera eventos: `kill {attacker, victim, weapon, headshot, wallbang?, throughSmoke?}`, `assist`, `flashAssist`, `damage`, `plant`, `defuse`, `move {player, from, to}`. O radar é reproduzido a partir dos eventos `move` + timing.
+
+### 5.4 Economia `[v0]` (valores do CS)
+- Início de lado: $800. Pistol round.
+- Vitória: $3250 (+$3500 se plant/defuse variante). Derrota: loss bonus $1400 → $1900 → $2400 → $2900 → $3400. Plant perdida: +$800.
+- Kill reward por arma: rifle $300, AWP $100, SMG $600, shotgun $900, faca $1500.
+- Preços: AK $2700, M4 $2900/$3100, AWP $4750, Galil/FAMAS $1800/$2050, MP9/MAC-10 $1250/$1050, Deagle $700, P250 $300, kevlar $650, kevlar+capacete $1000, kit $400, flash $200, smoke $300, molotov $400/$600, HE $300.
+- **Decisão de compra do time** (IGL ou média do Tático): `full buy` se todos podem comprar rifle+armor; `force` se média ≥ $2000 e loss streak ≥ 2; `eco` caso contrário. `Tático` baixo erra essa decisão com probabilidade `(100 − tatico)/200`.
+- Individual: AWPer compra AWP se ≥ $5750; Rifler compra o melhor rifle que cabe deixando $1000 de reserva; Support prioriza util.
+
+Armas afetam duelo: `AWP` +18 mira em longa / −10 em curta; `rifle` 0; `SMG` −6 (+6 em curta); `pistola` −18; sem armor −8 na sobrevivência.
+
+### 5.5 Resolução de duelo `[v0]`
+Para atacante **A** (quem inicia) e defensor **D**:
+
+```
+scoreA = 0.45·mira + 0.25·peek + 0.15·mov + 0.15·util_bonus + arma + situação
+scoreD = 0.45·mira + 0.25·tatico(posição) + 0.15·mov + 0.15·util_bonus + arma + situação
+
+situação: defensor segurando ângulo +6; atacante flashado −15·(util_inimiga/100); duelo em smoke −10 ambos; retake pró-T +5; 2v1 numérico +8 pro lado com vantagem
+
+P(A vence) = 1 / (1 + 10^((scoreD − scoreA) / 40))
+P(headshot | vitória) = 0.25 + 0.5·(mira_vencedor/100)
+P(perdedor sobrevive recuando) = 0.05 + 0.25·(mov_perdedor/100)   → gera 'damage' em vez de 'kill'
+P(trade em 3s) = 0.3 + 0.4·(peek do próximo aliado/100)
+```
+
+Distâncias do mapa: cada rota/área tem `range: 'short'|'mid'|'long'` que aplica o modificador de arma.
+
+### 5.6 Mental e forma
+- `Mental` efetivo começa a partida em `base × forma`, onde forma = `clamp(0.85, 1.15, rating_recente)`.
+- Durante a partida: perder round −2, perder 3 seguidos −5 extra, ganhar clutch +6, sofrer ace −4, vencer pistol +3. Clamp 0–100.
+- `Mental` entra em: clutch (substitui `tatico` no scoreD e soma 0.2·mental ao score), decisão de save/força, e como multiplicador leve em todos os atributos: `× (0.9 + 0.2·mental/100)`.
+
+### 5.7 Bots
+Mesma estrutura de `Player`. Atributos gerados por nível alvo, classes distribuídas. Nomes de paródia gerados (lista em `data/botnames.ts`).
+
+### 5.8 Testes de balance (obrigatórios)
+Rodar 5.000 partidas por cenário:
+- Times iguais → 50% ± 3.
+- Time +10 em todos os atributos → 62–68%.
+- Pistol round: vencedor do pistol vence o round 2 em ≥ 75%.
+- Eco vs full buy → 12–20%.
+- Rating médio de todos os jogadores ≈ 1.00 ± 0.03; desvio padrão 0.15–0.25.
+- Distribuição de placares: 13–0 a 13–2 < 6% em times iguais.
+- Duração média 22–26 rounds.
+
+---
+
+## 6. Cartas e build
+
+### 6.1 Tipos
+- **Plana**: +N num atributo (ex.: "Crosshair placement: +4 Mira"). Comum.
+- **Condicional**: modificador em situação (ex.: "Pré-mira de esquina: +8 Mira quando defensor segurando ângulo"). É onde a build fica interessante.
+- **Comportamental**: muda o que o sim faz (ex.: "Scout no pistol: compra Scout no round 2 se tiver $"; "Salva a arma: em 1v3+ recua em vez de duelar").
+- **Classe**: carrega tag de classe e conta pro conjunto.
+
+### 6.2 Raridade
+| Tier | Nome | Cor | Drop `[v0]` |
+|---|---|---|---|
+| 1 | Comum | cinza | 60% |
+| 2 | Incomum | azul | 25% |
+| 3 | Rara | roxo | 10% |
+| 4 | Épica | rosa | 4% |
+| 5 | Lendária | dourado | 1% |
+
+Duplicata → nível da carta (I, II, III). Nível aumenta o número da carta (+4 → +5 → +6). Máximo III `[v0]`.
+
+### 6.3 Slots e conjuntos
+- Slots por nível `[v0]`: lvl 0 → 2, lvl 5 → 3, lvl 12 → 4, lvl 20 → 5, lvl 35 → 6.
+- **Conjunto**: 3 cartas com a mesma tag de classe ativam a classe e seu bônus. Com 6 slots dá pra ter 2 conjuntos = classe híbrida (ex.: Entry + AWPer = "entry awper").
+- Sem conjunto → Rifler.
+
+Bônus de conjunto `[v0]`:
+| Classe | Bônus (3 cartas) |
+|---|---|
+| Entry | primeiro duelo do round: +10 Peek; trade garantido em 3s se morrer |
+| IGL | time ganha +8 Tático nas decisões de compra e call |
+| AWPer | AWP custa −$500; +6 Mira em long |
+| Âncora | +12 sobrevivência em site; +$ por round sobrevivido |
+| Support | util do time +15% efetiva; +1 assist por round como média |
+| Star | pode escolher o duelo mais favorável 1x por round |
+
+### 6.4 Box inicial
+5 cartas comuns (2 planas, 1 condicional, 2 de classe aleatória), 1 skin comum de rifle, 1 skin comum de pistola, 1 avatar.
+
+---
+
+## 7. Cosméticos
+
+- Categorias: skin de arma (por arma), luvas, agente (retrato), fundo de perfil, badge, kill feed style, card back.
+- Raridade mesma escala. Duplicata → pó → craft (Fase 3).
+- **Palco**: skin equipada aparece no kill feed (`nick [AK | skin]`), no scoreboard (ícone), no perfil (showcase até 6 itens).
+- Todos originais. Nada baseado em skins existentes do CS.
+- Monetização (Fase 3): box de cosmético e skins específicas. **Nunca cartas por dinheiro.**
+
+---
+
+## 8. Recompensas e progressão
+
+### 8.1 Recompensa de partida
+```
+XP = base(60) × resultado(1.0 vitória / 0.6 derrota) × desempenho(0.6 + 0.8·clamp(rating, 0.5, 1.5) − 0.4) × minigame(1.0–1.3) × modo(solo 1.0 / online 1.6)
+```
+Um 1.60 na derrota rende mais que um 0.80 na vitória — por design.
+
+- Box de cartas: 1 por partida solo, 1 + chance de extra online. Raridade rola tier a tier.
+- Cosmético: 8% solo, 15% online `[v0]`.
+- Minigame: perfect (top 10% do próprio histórico) → baú extra pequeno.
+
+### 8.2 Rating individual (estilo HLTV 2.0)
+Aproximação pública, ponto de partida `[v0]`:
+```
+Impact = 2.13·KPR + 0.42·APR − 0.41
+Rating = 0.0073·KAST + 0.3591·KPR − 0.5329·DPR + 0.2372·Impact + 0.0032·ADR + 0.1587
+```
+Ajuste por role `[v0]`: Âncora +0.05 por round sobrevivido em defesa; Support conta flash assist como 0.5 kill no Impact; IGL soma +0.03 por round vencido em call correta.
+
+Rating de carreira = média ponderada (últimas 50 partidas peso 2, resto peso 1). Forma = média das últimas 10.
+
+### 8.3 Patente / MMR (Fase 2)
+Elo com K=25 `[v0]`. Amortecimento por desempenho:
+```
+f = clamp((rating_partida − 1.0) × 0.8, −0.4, +0.4)
+vitória: Δ = +K × (1 − E) × (1 + f)
+derrota: Δ = −K × E × (1 − f)
+```
+Carry perde menos, carregado ganha menos.
+
+### 8.4 Rankings
+- **Patente**: ladder clássica, por temporada.
+- **Rating**: ladder por faixa de patente (padrão) e global normalizado pelo nível dos adversários. Filtros: temporada, mapa, role. Badges "Top 100 rating" no perfil.
+
+### 8.5 Temporada (Fase 2)
+30 dias. Reseta patente (soft reset: MMR → média com o centro). Rating de carreira, nível, cartas, cosméticos permanecem. Recompensa de fim de temporada por patente final e por posição no ranking de rating.
+
+---
+
+## 9. Tela de partida (HLTV Live)
+
+Layout mobile-first (vertical), reorganiza em desktop:
+
+```
+┌──────────────────────────────┐
+│ CT 7 – 5 T   round 13  1:12  │  ← placar, timer, ícone C4 quando plantada
+│ $ CT: 4.2k avg  T: 1.1k (eco)│  ← economia dos times
+├──────────────────────────────┤
+│         RADAR (canvas)       │  ← 10 pontos coloridos, direção, mortos = X,
+│                              │     smoke/molotov = blobs, C4, sites A/B
+├──────────────────────────────┤
+│ KILL FEED                    │  ← "nick [ícone arma][HS] nick", skin aparece
+├──────────────────────────────┤
+│ MINIGAME (área fixa)         │  ← ou sobrepõe o radar no momento do duelo
+├──────────────────────────────┤
+│ SCOREBOARD (expansível)      │  ← K D A ADR Rating, seu boneco destacado
+└──────────────────────────────┘
+```
+
+- Reprodução do log: normal (round ≈ 15–20s), 2x, pular pro fim. Pausa.
+- Resultado já está decidido no início; a tela só desenrola.
+- Eventos de round destacados: pistol, eco, force, clutch, ace, plant/defuse.
+- Skins: a arma no kill feed usa o ícone da skin equipada.
+- Fim de partida: tela de resultado com stats, rating da partida, recompensas, box pra abrir.
+
+---
+
+## 10. Minigames
+
+Regra: **sincronizados ao sim, opcionais, só recompensa.** Score do minigame nunca altera o log.
+
+### 10.1 Alvo de duelo (Fase 1)
+Quando o boneco do jogador entra num duelo, um alvo aparece no canvas do minigame por ~1s. Clicar/tocar rápido e centrado = score alto. Score do minigame = média dos duelos "acompanhados". O kill feed mostra o resultado do sim normalmente. Perfect = acertou todos os duelos com tempo < 400ms.
+
+### 10.2 Ritmo (Fase 3) — estilo osu
+Sequência de alvos no ritmo da partida (eco = calmo, retake = intenso).
+
+### 10.3 Boneco que atira (Fase 3) — estilo agar.io
+Top-down mini-arena, controla um bonequinho, alvo = bots. Usado no Deathmatch.
+
+### 10.4 Treino
+Mira → alvos; Utilitária → acertar o ponto de lineup; Movimentação → sequência de teclas/toque; Peek → timing (clicar no momento certo); Tático → escolha rápida entre 3 opções de call.
+
+---
+
+## 11. Mapas
+
+Paródias. Fase 1: **um mapa** — dois sites, mid, layout inspirado em mapa clássico de dois bombsites, nome próprio (a definir; não usar nomes reais). Radar desenhado do zero.
+
+Estrutura de dados: `areas[]` (id, nome, polígono no radar, range), `routes[]` (de → para, tempo em s, range), `sites` (A/B com áreas de plant). Fase 3: mais 2–3 mapas.
+
+---
+
+## 12. Perfil (estilo página do HLTV)
+
+Nick, avatar, país, nível, patente, rating de carreira, forma (🔥 streak), gráfico de rating por partida, stats de carreira (K/D, ADR, HS%, clutches, rating por temporada), mapas com winrate, arma mais usada, classe/build atual **pública**, histórico de partidas, showcase de cosméticos, badges de ranking. Fase 3: orgs/contratos e troféus.
+
+---
+
+## 13. Fase 3 — carreira pro (esboço)
+
+Orgs de paródia olheiram por **rating** (não patente). Passou de X no ranking por 2 semanas → proposta. Contrato = moeda diária passiva + uniforme cosmético exclusivo + campeonatos com bracket. Orgs têm tier; org maior compra o jogador. Partidas oficiais no calendário; ausente = boneco joga passivo, rende menos. Rejeitar contrato é uma decisão real.
+
+---
+
+## 14. Dados / persistência
+
+Fase 1 (Dexie):
+- `character` (1 registro): atributos, lvl, xp, classe/build, cosméticos equipados
+- `cards`, `cosmetics`: inventário com quantidade/nível
+- `matches`: log comprimido + stats + rating (últimas 200)
+- `training`: sessões do dia (pra rendimento decrescente)
+- `settings`
+
+Fase 2 (Supabase): mesmas tabelas por `user_id` com RLS; `matches_online` com seed + inputs (log reconstruído no cliente); `queue`; `seasons`; `ratings_ladder` (view materializada).
+
+---
+
+## 15. Glossário
+- **Barra**: atributo base do boneco, sobe só com Treino/DM.
+- **Carta**: item de build; modifica atributos ou comportamento.
+- **Conjunto**: 3 cartas de uma classe → classe ativa.
+- **Forma**: rating recente; afeta Mental inicial.
+- **Presente/Passivo**: boneco jogando com ou sem o dono online.
+- **Log**: saída determinística do motor; o app reproduz.

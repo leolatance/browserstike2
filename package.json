@@ -1,0 +1,16 @@
+{
+  "name": "idle-strike-2",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "test": "npm run test -w @idle-strike/engine",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "dev": "npm run dev -w @idle-strike/web",
+    "build": "npm run build --workspaces --if-present"
+  }
+}
