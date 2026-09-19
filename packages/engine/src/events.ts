@@ -32,6 +32,8 @@ export interface RoundStartEvent extends Base {
   buy: Record<Side, BuyType>;
   /** True for rounds 1 and 13 (half starts, $800 each). */
   pistol: boolean;
+  /** Buying happens in [0, freezetimeEnd); the action starts at freezetimeEnd. */
+  freezetimeEnd: number;
 }
 
 export interface BuyEvent extends Base {
@@ -62,6 +64,33 @@ export interface MoveEvent extends Base {
   duration: number;
 }
 
+export type DuelSituation = {
+  holdingAngle: boolean;
+  attackerFlashed: boolean;
+  defenderFlashed: boolean;
+  inSmoke: boolean;
+  /** Which side is the T defending a planted bomb. */
+  retakeProT: 'A' | 'D' | null;
+  /** Side with more players alive. */
+  numbers: 'A' | 'D' | null;
+  /** Side fighting a 1vN. */
+  clutch: 'A' | 'D' | null;
+};
+
+/**
+ * Emitted ~0.8s before a duel resolves (the minigame hook). Every kill/damage
+ * that results from it carries this `id`.
+ */
+export interface DuelEvent extends Base {
+  type: 'duel';
+  id: string;
+  attacker: PlayerId;
+  defender: PlayerId;
+  area: AreaId;
+  range: 'short' | 'mid' | 'long';
+  situation: DuelSituation;
+}
+
 export interface DamageEvent extends Base {
   type: 'damage';
   attacker: PlayerId;
@@ -69,6 +98,8 @@ export interface DamageEvent extends Base {
   amount: number;
   weapon: string;
   area: AreaId;
+  /** Duel that produced it; absent for grenade damage. */
+  duel?: string;
 }
 
 export interface KillEvent extends Base {
@@ -83,6 +114,8 @@ export interface KillEvent extends Base {
   area: AreaId;
   /** True when this kill traded a teammate who died within the last 3s. */
   trade?: boolean;
+  /** Duel that produced it. */
+  duel?: string;
 }
 
 export interface AssistEvent extends Base {
@@ -111,6 +144,20 @@ export interface PlantEvent extends Base {
   type: 'plant';
   player: PlayerId;
   site: SiteId;
+}
+
+export interface DefuseStartEvent extends Base {
+  type: 'defuseStart';
+  player: PlayerId;
+  hasKit: boolean;
+  /** Seconds until `defuse` if nothing interrupts. */
+  duration: number;
+}
+
+/** The defuser was interrupted (killed or forced off the bomb). */
+export interface DefuseCancelEvent extends Base {
+  type: 'defuseCancel';
+  player: PlayerId;
 }
 
 export interface DefuseEvent extends Base {
@@ -146,7 +193,10 @@ export type MatchEvent =
   | AssistEvent
   | FlashAssistEvent
   | UtilEvent
+  | DuelEvent
   | PlantEvent
+  | DefuseStartEvent
+  | DefuseCancelEvent
   | DefuseEvent
   | RoundEndEvent;
 

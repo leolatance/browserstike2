@@ -13,6 +13,7 @@ import { effectiveAttrs, type Attrs, type Player, type PlayerClass } from './pla
 import type { Rng } from './rng';
 
 export const ROUND = {
+  FREEZETIME: 5, // [v1] buying phase; the 1:55 clock starts after it
   TIME: 115, // [v0] 1:55
   BOMB_TIMER: 40, // [v0]
   PLANT_TIME: 3, // [v0]
@@ -57,6 +58,15 @@ export const ROUND = {
   WEAPON_PICKUP: 0.7, // [v0]
   /** The loser of a duel lands some damage before dying/retreating (feeds assists and ADR). */
   CHIP_CHANCE: 0.2, // [v1]
+  MOLOTOV_USE: 0.5, // [v1] chance a Support/Rifler with a molotov throws it on the first site contact
+  MOLOTOV_DMG_MIN: 20, // [v1]
+  MOLOTOV_DMG_MAX: 40, // [v1]
+  /** P(reposition instead of taking the burn) = MOLOTOV_MOVE_BASE + MOLOTOV_MOVE_TATICO · tatico/100 */
+  MOLOTOV_MOVE_BASE: 0.3, // [v1]
+  MOLOTOV_MOVE_TATICO: 0.5, // [v1]
+  HE_USE: 0.5, // [v1]
+  HE_DMG_MIN: 20, // [v1]
+  HE_DMG_MAX: 50, // [v1]
   CHIP_MIN: 10, // [v1]
   CHIP_MAX: 60, // [v1]
   FLASH_ASSIST: 0.7, // [v0]
@@ -174,6 +184,8 @@ interface Live {
   /** T: path from current position to the target site (for radar + timing). */
   flashes: number;
   smokes: number;
+  molotovs: number;
+  hes: number;
   damagedBy: PlayerId[];
   flashedBy?: Live;
   carrier: boolean;
@@ -210,6 +222,8 @@ function nextUp(list: Live[], order: PlayerClass[]): Live {
 
 export function simulateRound(params: RoundParams): RoundResult {
   const { map, rng, round } = params;
+  const deadline = ROUND.FREEZETIME + ROUND.TIME;
+  let duelCounter = 0;
   const events: MatchEvent[] = [];
   const emit = (e: MatchEvent) => events.push(e);
 
@@ -237,6 +251,8 @@ export function simulateRound(params: RoundParams): RoundResult {
       contactsLeft: ROUND.CONTACTS_PER_CT,
       flashes: 0,
       smokes: 0,
+      molotovs: 0,
+      hes: 0,
       damagedBy: [],
       carrier: false,
       engagements: 0,
@@ -296,6 +312,7 @@ export function simulateRound(params: RoundParams): RoundResult {
     money,
     buy: { ...buy },
     pistol: params.pistol,
+    freezetimeEnd: ROUND.FREEZETIME,
   });
 
   for (const side of ['CT', 'T'] as Side[]) {
@@ -311,11 +328,14 @@ export function simulateRound(params: RoundParams): RoundResult {
       if (purchase.inv.weapon === 'awp') teamHasAwp = true;
       l.flashes = purchase.inv.utils.filter((u) => u === 'flash').length;
       l.smokes = purchase.inv.utils.filter((u) => u === 'smoke').length;
-      if (purchase.spent > 0) {
+      l.molotovs = purchase.inv.utils.filter((u) => u === 'molotov').length;
+      l.hes = purchase.inv.utils.filter((u) => u === 'he').length;
+      // Emitted for everyone (spent may be 0) so the UI knows every loadout.
+      {
         emit({
           type: 'buy',
           round,
-          t: 1 + i,
+          t: Math.min(ROUND.FREEZETIME - 1, 1 + i),
           player: l.rp.id,
           weapon: purchase.inv.weapon,
           armor: purchase.inv.armor,
@@ -333,8 +353,8 @@ export function simulateRound(params: RoundParams): RoundResult {
   const tIgl = ts.find((l) => l.cls === 'igl');
   const setup = chooseCTSetup(rng, ctIgl, params.prevTCall, buy.CT);
   const { call, target } = chooseTCall(rng, tIgl, setup, buy.T, buy.CT === 'eco');
-  emit({ type: 'call', round, t: 0, side: 'CT', call: setup, ...(ctIgl ? { caller: ctIgl.rp.id } : {}) });
-  emit({ type: 'call', round, t: 0, side: 'T', call, ...(tIgl ? { caller: tIgl.rp.id } : {}) });
+  emit({ type: 'call', round, t: ROUND.FREEZETIME, side: 'CT', call: setup, ...(ctIgl ? { caller: ctIgl.rp.id } : {}) });
+  emit({ type: 'call', round, t: ROUND.FREEZETIME, side: 'T', call, ...(tIgl ? { caller: tIgl.rp.id } : {}) });
 
   const site: MapSite = map.sites[target];
   const otherSite: SiteId = target === 'A' ? 'B' : 'A';
@@ -360,7 +380,7 @@ export function simulateRound(params: RoundParams): RoundResult {
   assignCTs(cts, setup, buy.CT === 'eco');
   for (const c of cts) {
     const pos = c.forward ? map.sites[c.post as SiteId].forward : c.post === 'mid' ? map.mid.ct : ctHold(c, cts, map);
-    c.readyAt = move(c, pos, 0);
+    c.readyAt = move(c, pos, ROUND.FREEZETIME);
     c.atSite = c.post === target && !c.forward;
   }
 
@@ -380,6 +400,8 @@ export function simulateRound(params: RoundParams): RoundResult {
   /** Pre-fight stops: [player, area, arrival] used for early contacts. */
   const stops: { l: Live; area: AreaId; t: number }[] = [];
   const stage = (l: Live, via: AreaId, start: number, execT: number) => {
+    start += ROUND.FREEZETIME;
+    execT += ROUND.FREEZETIME;
     stops.push(...pathStops(map, l, map.spawns.T, via, start));
     const viaT = move(l, via, start);
     plans.set(l, { via, viaT, execT });
@@ -443,11 +465,11 @@ export function simulateRound(params: RoundParams): RoundResult {
     return best;
   };
 
-  const kill = (killer: Live, victim: Live, t: number, area: AreaId, trade: boolean, headshot: boolean) => {
+  const kill = (killer: Live, victim: Live, t: number, area: AreaId, trade: boolean, headshot: boolean, duel: string) => {
     const w: Weapon = weapon(killer.rp.inv.weapon);
-    emit({ type: 'damage', round, t, attacker: killer.rp.id, victim: victim.rp.id, amount: victim.hp, weapon: w.id, area });
+    emit({ type: 'damage', round, t, attacker: killer.rp.id, victim: victim.rp.id, amount: victim.hp, weapon: w.id, area, duel });
     killer.damage += victim.hp;
-    emit({ type: 'kill', round, t, attacker: killer.rp.id, victim: victim.rp.id, weapon: w.id, headshot, area, ...(trade ? { trade: true } : {}) });
+    emit({ type: 'kill', round, t, attacker: killer.rp.id, victim: victim.rp.id, weapon: w.id, headshot, area, duel, ...(trade ? { trade: true } : {}) });
     victim.alive = false;
     victim.hp = 0;
     killer.kills++;
@@ -493,12 +515,49 @@ export function simulateRound(params: RoundParams): RoundResult {
     firstAtSite: boolean;
   }
 
+  /** Grenade damage (no duel): capped so it never kills. */
+  const burn = (thrower: Live, target: Live, amount: number, t: number, area: AreaId) => {
+    const dmg = Math.min(target.hp - 1, amount);
+    if (dmg <= 0) return;
+    emit({ type: 'damage', round, t, attacker: thrower.rp.id, victim: target.rp.id, amount: dmg, weapon: thrower.rp.inv.weapon, area });
+    target.hp -= dmg;
+    target.damagedBy.push(thrower.rp.id);
+    thrower.damage += dmg;
+  };
+
+  /** Molotov / HE on the first contact of a fight (Support and Rifler throw). */
+  const useGrenades = (throwers: Live[], targets: Live[], t: number, area: AreaId) => {
+    const live = targets.filter((l) => l.alive);
+    if (live.length === 0) return;
+    const molly = throwers.find((l) => l.molotovs > 0 && (l.cls === 'support' || l.cls === 'rifler'));
+    if (molly && rng.chance(ROUND.MOLOTOV_USE)) {
+      molly.molotovs--;
+      emit({ type: 'util', round, t: Math.max(0, t - 2), player: molly.rp.id, util: 'molotov', area });
+      for (const target of live) {
+        if (rng.chance(ROUND.MOLOTOV_MOVE_BASE + ROUND.MOLOTOV_MOVE_TATICO * (target.attrs.tatico / 100))) target.moved = true;
+        else burn(molly, target, rng.int(ROUND.MOLOTOV_DMG_MIN, ROUND.MOLOTOV_DMG_MAX), t - 1, area);
+      }
+    }
+    const he = throwers.find((l) => l.hes > 0);
+    if (he && rng.chance(ROUND.HE_USE)) {
+      he.hes--;
+      emit({ type: 'util', round, t: Math.max(0, t - 1), player: he.rp.id, util: 'he', area });
+      const hit = rng.shuffle(live).slice(0, rng.int(1, 2));
+      for (const target of hit) burn(he, target, rng.int(ROUND.HE_DMG_MIN, ROUND.HE_DMG_MAX), t - 1, area);
+    }
+  };
+
   /** Resolve one duel (with util and trade) and mutate state. Returns the end time. */
   const fight = (a: Live, d: Live, t: number, o: FightOpts): number => {
+    if (o.firstAtSite) {
+      useGrenades(o.presentA, o.presentD, t, o.area);
+      useGrenades(o.presentD, o.presentA, t, o.area);
+    }
     a.engagements++;
     d.engagements++;
     markClutch(a);
     markClutch(d);
+    const duelId = `r${round}d${++duelCounter}`;
     const ctx: DuelContext = {
       range: areaRange(map, o.area),
       defenderHoldingAngle: o.defenderHoldingAngle && !d.moved,
@@ -531,21 +590,42 @@ export function simulateRound(params: RoundParams): RoundResult {
       }
     }
 
-    const res = resolveDuel(duelist(a, isClutch(a)), duelist(d, isClutch(d)), ctx, rng);
+    const clutchA = isClutch(a);
+    const clutchD = isClutch(d);
+    emit({
+      type: 'duel',
+      round,
+      t: Math.round(Math.max(0, t - 0.8) * 10) / 10,
+      id: duelId,
+      attacker: a.rp.id,
+      defender: d.rp.id,
+      area: o.area,
+      range: ctx.range,
+      situation: {
+        holdingAngle: ctx.defenderHoldingAngle,
+        attackerFlashed: ctx.attackerFlashedBy !== undefined,
+        defenderFlashed: ctx.defenderFlashedBy !== undefined,
+        inSmoke: ctx.inSmoke,
+        retakeProT: ctx.retakeProT,
+        numbers: ctx.numbersAdvantage,
+        clutch: clutchA ? 'A' : clutchD ? 'D' : null,
+      },
+    });
+    const res = resolveDuel(duelist(a, clutchA), duelist(d, clutchD), ctx, rng);
     const winner = res.winner === 'A' ? a : d;
     const loser = res.winner === 'A' ? d : a;
 
     // Chip damage: the loser usually lands a few bullets first.
     if (winner.hp > 1 && rng.chance(ROUND.CHIP_CHANCE)) {
       const chip = Math.min(winner.hp - 1, rng.int(ROUND.CHIP_MIN, ROUND.CHIP_MAX));
-      emit({ type: 'damage', round, t, attacker: loser.rp.id, victim: winner.rp.id, amount: chip, weapon: loser.rp.inv.weapon, area: o.area });
+      emit({ type: 'damage', round, t, attacker: loser.rp.id, victim: winner.rp.id, amount: chip, weapon: loser.rp.inv.weapon, area: o.area, duel: duelId });
       winner.hp -= chip;
       winner.damagedBy.push(loser.rp.id);
       loser.damage += chip;
     }
 
     if (res.loserSurvived) {
-      emit({ type: 'damage', round, t, attacker: winner.rp.id, victim: loser.rp.id, amount: res.damage, weapon: winner.rp.inv.weapon, area: o.area });
+      emit({ type: 'damage', round, t, attacker: winner.rp.id, victim: loser.rp.id, amount: res.damage, weapon: winner.rp.inv.weapon, area: o.area, duel: duelId });
       winner.damage += res.damage;
       loser.hp -= res.damage;
       loser.damagedBy.push(winner.rp.id);
@@ -558,14 +638,14 @@ export function simulateRound(params: RoundParams): RoundResult {
       return t;
     }
 
-    kill(winner, loser, t, o.area, false, res.headshot);
+    kill(winner, loser, t, o.area, false, res.headshot, duelId);
     winner.flashedBy = undefined;
     // Trade: the next present teammate of the loser re-peeks the winner.
     const mates = (loser === a ? o.presentA : o.presentD).filter((l) => l !== loser && l.alive && !l.retreated);
     const trader = orderBy(mates, loser.side === 'T' ? T_ATTACK_ORDER : DEFEND_ORDER)[0];
     if (trader && rng.chance(tradeChance(trader.attrs.peek))) {
       const tt = t + rng.int(1, 3);
-      kill(trader, winner, tt, o.area, true, rng.chance(headshotChance(trader.attrs.mira)));
+      kill(trader, winner, tt, o.area, true, rng.chance(headshotChance(trader.attrs.mira)), duelId);
       loser.traded = true;
       return tt;
     }
@@ -619,7 +699,7 @@ export function simulateRound(params: RoundParams): RoundResult {
   for (const c of cts) {
     if (c.alive && c.forward) {
       c.forward = false;
-      c.readyAt = move(c, ctHold(c, cts, map), Math.max(c.readyAt, ROUND.FORWARD_FALLBACK));
+      c.readyAt = move(c, ctHold(c, cts, map), Math.max(c.readyAt, ROUND.FREEZETIME + ROUND.FORWARD_FALLBACK));
       c.atSite = c.post === target;
     }
   }
@@ -665,7 +745,7 @@ export function simulateRound(params: RoundParams): RoundResult {
   const finish = (w: Side, r: RoundEndReason, at: number) => {
     winner = w;
     reason = r;
-    endT = Math.min(Math.round(at), ROUND.TIME + ROUND.BOMB_TIMER);
+    endT = Math.min(Math.round(at), deadline + ROUND.BOMB_TIMER);
   };
 
   for (let guard = 0; guard < 400 && !winner; guard++) {
@@ -680,8 +760,8 @@ export function simulateRound(params: RoundParams): RoundResult {
       finish('T', 'elimination', lastKillT);
       break;
     }
-    if (t >= ROUND.TIME) {
-      finish('CT', 'time', ROUND.TIME);
+    if (t >= deadline) {
+      finish('CT', 'time', deadline);
       break;
     }
 
@@ -691,7 +771,7 @@ export function simulateRound(params: RoundParams): RoundResult {
     if (pa.length === 0) {
       const pending = ts.filter((l) => l.alive && !l.saving && l.readyAt > t);
       if (pending.length === 0) {
-        finish('CT', 'time', ROUND.TIME);
+        finish('CT', 'time', deadline);
         break;
       }
       // Outnumbered after a failed hit? Save.
@@ -700,12 +780,12 @@ export function simulateRound(params: RoundParams): RoundResult {
       const next = Math.min(...pending.map((l) => l.readyAt));
       if (tAlive < ctAlive && tAlive <= 2 && alerted) {
         const tat = decisionTatico('T');
-        if (next > ROUND.TIME - 15 || rng.chance(ROUND.SAVE_BASE + ROUND.SAVE_TATICO * (tat / 100))) {
+        if (next > deadline - 15 || rng.chance(ROUND.SAVE_BASE + ROUND.SAVE_TATICO * (tat / 100))) {
           for (const l of alive('T')) {
             l.saving = true;
             move(l, map.spawns.T, t);
           }
-          finish('CT', 'time', ROUND.TIME);
+          finish('CT', 'time', deadline);
           break;
         }
       }
@@ -719,8 +799,8 @@ export function simulateRound(params: RoundParams): RoundResult {
       // instead of running in one by one.
       const carrierDead = !ts.some((l) => l.alive && l.carrier);
       const plantAt = t + ROUND.SITE_CLEAR_TIME + ROUND.PLANT_TIME + (carrierDead ? ROUND.PLANT_DROPPED_EXTRA : 0);
-      if (plantAt >= ROUND.TIME) {
-        finish('CT', 'time', ROUND.TIME);
+      if (plantAt >= deadline) {
+        finish('CT', 'time', deadline);
         break;
       }
       const planter = orderBy(pa, ['support', 'rifler', 'igl', 'anchor', 'awper', 'star', 'entry'])[0] as Live;
@@ -778,6 +858,7 @@ export function simulateRound(params: RoundParams): RoundResult {
     const presentT = (at: number) => ts.filter((l) => l.alive && !l.retreated && l.readyAt <= at);
 
     t = Math.max(t, plantT + 2);
+    let firstRetake = true;
     for (let guard = 0; guard < 400 && !winner; guard++) {
       for (const l of [...ts, ...cts]) if (l.alive && l.retreated && l.readyAt <= t) l.retreated = false;
 
@@ -789,9 +870,11 @@ export function simulateRound(params: RoundParams): RoundResult {
         const defusers = cts.filter((l) => l.alive && !l.saving);
         const kit = defusers.some((l) => l.rp.inv.kit);
         const arrival = Math.max(lastKillT, Math.min(...defusers.map((l) => l.readyAt)));
-        const done = arrival + (kit ? ROUND.DEFUSE_TIME_KIT : ROUND.DEFUSE_TIME);
+        const duration = kit ? ROUND.DEFUSE_TIME_KIT : ROUND.DEFUSE_TIME;
+        const done = arrival + duration;
+        const defuser = defusers.find((l) => l.rp.inv.kit) ?? (defusers[0] as Live);
+        if (arrival < explodeAt) emit({ type: 'defuseStart', round, t: arrival, player: defuser.rp.id, hasKit: kit, duration });
         if (done <= explodeAt) {
-          const defuser = defusers.find((l) => l.rp.inv.kit) ?? (defusers[0] as Live);
           emit({ type: 'defuse', round, t: done, player: defuser.rp.id, site: target, kit });
           defuser.defused = true;
           finish('CT', 'defuse', done);
@@ -818,15 +901,19 @@ export function simulateRound(params: RoundParams): RoundResult {
       if (pt.length === 0) {
         // Ts retreated: CTs try to defuse before they come back.
         const kit = pc.some((l) => l.rp.inv.kit);
-        const done = t + (kit ? ROUND.DEFUSE_TIME_KIT : ROUND.DEFUSE_TIME);
+        const duration = kit ? ROUND.DEFUSE_TIME_KIT : ROUND.DEFUSE_TIME;
+        const done = t + duration;
+        const defuser = pc.find((l) => l.rp.inv.kit) ?? (pc[0] as Live);
+        emit({ type: 'defuseStart', round, t, player: defuser.rp.id, hasKit: kit, duration });
         const back = ts.filter((l) => l.alive && l.readyAt > t).map((l) => l.readyAt);
         const nextT = back.length ? Math.min(...back) : Infinity;
         if (nextT < done) {
+          // A T comes back: the defuser gets off the bomb and the fight resumes.
+          emit({ type: 'defuseCancel', round, t: nextT, player: defuser.rp.id });
           t = nextT;
           continue;
         }
         if (done <= explodeAt) {
-          const defuser = pc.find((l) => l.rp.inv.kit) ?? (pc[0] as Live);
           emit({ type: 'defuse', round, t: done, player: defuser.rp.id, site: target, kit });
           defuser.defused = true;
           finish('CT', 'defuse', done);
@@ -845,13 +932,14 @@ export function simulateRound(params: RoundParams): RoundResult {
         presentD: pt,
         fallbackA: ctFallback(a, map),
         fallbackD: site.entrances[0],
-        firstAtSite: false,
+        firstAtSite: firstRetake,
       });
+      firstRetake = false;
       t = tEnd + rng.int(ROUND.DUEL_GAP_MIN, ROUND.DUEL_GAP_MAX);
     }
   }
 
-  if (!winner) finish('CT', 'time', ROUND.TIME);
+  if (!winner) finish('CT', 'time', deadline);
   const finalWinner = winner as unknown as Side;
   const finalReason = reason as unknown as RoundEndReason;
 

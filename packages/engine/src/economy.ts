@@ -294,6 +294,7 @@ export function buyForPlayer(input: PurchaseInput, rng: Rng): Purchase {
       buyUtil('smoke', reserve);
       buyUtil('flash', reserve);
       if (input.class === 'entry' || input.class === 'rifler') buyUtil('molotov', reserve);
+      buyUtil('he', reserve);
       break;
     }
   }
