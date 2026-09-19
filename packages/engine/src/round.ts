@@ -513,18 +513,21 @@ export function simulateRound(params: RoundParams): RoundResult {
       aThrower.flashes--;
       ctx.defenderFlashedBy = aThrower.attrs.util;
       d.flashedBy = aThrower;
+      emit({ type: 'util', round, t: Math.max(0, t - 1), player: aThrower.rp.id, util: 'flash', area: o.area });
     }
     const dThrower = bestThrower(o.presentD);
     if (dThrower && rng.chance(ROUND.FLASH_USE)) {
       dThrower.flashes--;
       ctx.attackerFlashedBy = dThrower.attrs.util;
       a.flashedBy = dThrower;
+      emit({ type: 'util', round, t: Math.max(0, t - 1), player: dThrower.rp.id, util: 'flash', area: o.area });
     }
     if (o.firstAtSite) {
       const smoker = o.presentA.find((l) => l.smokes > 0);
       if (smoker && rng.chance(ROUND.SMOKE_DUEL)) {
         smoker.smokes--;
         ctx.inSmoke = true;
+        emit({ type: 'util', round, t: Math.max(0, t - 2), player: smoker.rp.id, util: 'smoke', area: o.area });
       }
     }
 

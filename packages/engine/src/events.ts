@@ -97,6 +97,16 @@ export interface FlashAssistEvent extends Base {
   victim: PlayerId;
 }
 
+export type UtilKind = 'flash' | 'smoke' | 'molotov' | 'he';
+
+/** A grenade used during a fight. `area` is where it lands. */
+export interface UtilEvent extends Base {
+  type: 'util';
+  player: PlayerId;
+  util: UtilKind;
+  area: AreaId;
+}
+
 export interface PlantEvent extends Base {
   type: 'plant';
   player: PlayerId;
@@ -135,6 +145,7 @@ export type MatchEvent =
   | KillEvent
   | AssistEvent
   | FlashAssistEvent
+  | UtilEvent
   | PlantEvent
   | DefuseEvent
   | RoundEndEvent;
