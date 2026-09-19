@@ -58,6 +58,11 @@
   margin-left: 3px;
 }
 
+.label {
+  color: var(--accent);
+  font-style: normal;
+}
+
 .perfect {
   color: var(--accent);
   font-weight: 700;

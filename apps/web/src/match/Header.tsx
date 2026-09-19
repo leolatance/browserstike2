@@ -20,6 +20,8 @@ export interface HeaderProps {
   /** Active defuse progress 0..1, null when nobody is defusing. */
   defuse: { progress: number; kit: boolean } | null;
   minigame: { enabled: boolean; onToggle: () => void };
+  /** Short transient notice (e.g. 'defuse interrompido'). */
+  notice: string | null;
 }
 
 export function Header(p: HeaderProps) {
@@ -52,7 +54,7 @@ export function Header(p: HeaderProps) {
           </div>
         )}
         <div className={styles.round}>
-          {p.result ? p.result : p.callLabel ? `${p.roundLabel} · ${p.callLabel}` : p.roundLabel}
+          {p.result ? p.result : p.notice ? `${p.roundLabel} · ${p.notice}` : p.callLabel ? `${p.roundLabel} · ${p.callLabel}` : p.roundLabel}
         </div>
       </div>
       <div className={`${styles.team} ${styles.t}`}>

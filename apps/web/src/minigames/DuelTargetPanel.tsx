@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { isEvent } from '@idle-strike/engine';
+import { isEvent, type DuelEvent, type MatchEvent } from '@idle-strike/engine';
 import type { ReplayPlayer } from '../match/replay';
 import { DUEL_TARGET, DuelTargetGame, type DuelTargetStats } from './duelTarget';
 import styles from './DuelTargetPanel.module.css';
@@ -8,15 +8,40 @@ interface Props {
   player: ReplayPlayer;
   /** The user's character id. */
   me: string;
+  /** Ids of the user's teammates (incl. `me`), to read clutch/trade context. */
+  team: string[];
   game: DuelTargetGame;
   /** Replay speed; at 4x the minigame switches itself off. */
   speed: number;
   onStats: (s: DuelTargetStats) => void;
 }
 
+/** Human label for the duel context of `me`. Never changes the score. */
+export function situationLabel(e: DuelEvent, me: string, team: string[], events: MatchEvent[]): string | null {
+  const iAmA = e.attacker === me;
+  const mySide = iAmA ? 'A' : 'D';
+  const s = e.situation;
+  if (s.clutch === mySide) {
+    const enemiesDead = new Set<string>();
+    for (const k of events) {
+      if (k.t > e.t) break;
+      if (isEvent(k, 'kill') && !team.includes(k.victim)) enemiesDead.add(k.victim);
+    }
+    return `clutch 1v${Math.max(1, 5 - enemiesDead.size)}`;
+  }
+  if (iAmA ? s.attackerFlashed : s.defenderFlashed) return 'flashado';
+  if (iAmA) {
+    const traded = events.some((k) => isEvent(k, 'kill') && k.t <= e.t && e.t - k.t <= 3 && team.includes(k.victim) && k.victim !== me);
+    if (traded) return 'trade';
+  }
+  if (!iAmA && s.holdingAngle) return 'segurando ângulo';
+  if (s.inSmoke) return 'em smoke';
+  return null;
+}
+
 const EMPTY: DuelTargetStats = { last: null, average: 0, accompanied: 0, total: 0, streak: 0, perfect: false };
 
-export function DuelTargetPanel({ player, me, game, speed, onStats }: Props) {
+export function DuelTargetPanel({ player, me, team, game, speed, onStats }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const [stats, setStats] = useState<DuelTargetStats>(EMPTY);
@@ -83,6 +108,13 @@ export function DuelTargetPanel({ player, me, game, speed, onStats }: Props) {
       ctx.arc(x, y, r * (1.6 - 0.6 * life), 0, Math.PI * 2);
       ctx.stroke();
       ctx.globalAlpha = 1;
+      if (target.label) {
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-0').trim();
+        ctx.font = `600 ${Math.max(10, Math.min(w, h) * 0.07)}px ${getComputedStyle(document.documentElement).getPropertyValue('--font')}`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillText(target.label, x, y + r * 1.7);
+      }
     };
 
     const onTick = () => {
@@ -99,7 +131,7 @@ export function DuelTargetPanel({ player, me, game, speed, onStats }: Props) {
           if (e.t <= cursorT) continue;
           if (e.t > st.t) break;
           if (isEvent(e, 'duel') && (e.attacker === me || e.defender === me)) {
-            game.spawn(e.id, performance.now());
+            game.spawn(e.id, performance.now(), situationLabel(e, me, team, ri.events));
             publish();
           }
         }
@@ -146,7 +178,7 @@ export function DuelTargetPanel({ player, me, game, speed, onStats }: Props) {
       ro.disconnect();
       canvas.removeEventListener('pointerdown', onPointer);
     };
-  }, [player, me, game, onStats]);
+  }, [player, me, team, game, onStats]);
 
   useEffect(() => {
     if (flash === null) return;
@@ -164,6 +196,7 @@ export function DuelTargetPanel({ player, me, game, speed, onStats }: Props) {
       <div className={styles.hud}>
         <span>
           último <b className="mono">{stats.last ? (stats.last.hit ? stats.last.score : 'x') : '–'}</b>
+          {stats.last?.label && <i className={styles.label}> {stats.last.label}</i>}
         </span>
         <span>
           média <b className="mono">{stats.accompanied ? stats.average : '–'}</b>

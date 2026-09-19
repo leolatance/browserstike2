@@ -525,6 +525,17 @@ export function simulateRound(params: RoundParams): RoundResult {
     thrower.damage += dmg;
   };
 
+  /** Step out of the fire into the neighbouring area and come back (radar sees it). */
+  const sidestep = (l: Live, t: number) => {
+    const fallback = l.side === 'CT' ? ctFallback(l, map) : site.entrances[0];
+    const path = shortestPath(map, l.area, fallback);
+    const hop = path?.path[1];
+    if (!hop) return;
+    const home = l.area;
+    const there = move(l, hop, t);
+    move(l, home, there);
+  };
+
   /** Molotov / HE on the first contact of a fight (Support and Rifler throw). */
   const useGrenades = (throwers: Live[], targets: Live[], t: number, area: AreaId) => {
     const live = targets.filter((l) => l.alive);
@@ -534,8 +545,10 @@ export function simulateRound(params: RoundParams): RoundResult {
       molly.molotovs--;
       emit({ type: 'util', round, t: Math.max(0, t - 2), player: molly.rp.id, util: 'molotov', area });
       for (const target of live) {
-        if (rng.chance(ROUND.MOLOTOV_MOVE_BASE + ROUND.MOLOTOV_MOVE_TATICO * (target.attrs.tatico / 100))) target.moved = true;
-        else burn(molly, target, rng.int(ROUND.MOLOTOV_DMG_MIN, ROUND.MOLOTOV_DMG_MAX), t - 1, area);
+        if (rng.chance(ROUND.MOLOTOV_MOVE_BASE + ROUND.MOLOTOV_MOVE_TATICO * (target.attrs.tatico / 100))) {
+          target.moved = true;
+          sidestep(target, Math.max(0, t - 2));
+        } else burn(molly, target, rng.int(ROUND.MOLOTOV_DMG_MIN, ROUND.MOLOTOV_DMG_MAX), t - 1, area);
       }
     }
     const he = throwers.find((l) => l.hes > 0);

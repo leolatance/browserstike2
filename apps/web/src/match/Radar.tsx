@@ -130,6 +130,22 @@ export function Radar({ player, map, highlight }: Props) {
         ctx.fillText('C4', P(snap.bomb.x), P(snap.bomb.y));
       }
 
+      // Duel lines (thin, colour of the initiator)
+      const dotOf = new Map(snap.players.map((p) => [p.id, p]));
+      for (const d of snap.duels) {
+        const a = dotOf.get(d.attacker);
+        const b = dotOf.get(d.defender);
+        if (!a || !b) continue;
+        ctx.strokeStyle = d.side === 'CT' ? c.ct : c.t;
+        ctx.lineWidth = 1;
+        ctx.globalAlpha = 0.9;
+        ctx.beginPath();
+        ctx.moveTo(P(a.x), P(a.y));
+        ctx.lineTo(P(b.x), P(b.y));
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+
       // Players
       const r = Math.max(5, size * 0.016);
       const roundOver = st.t >= ri.end.t;

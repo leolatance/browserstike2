@@ -20,6 +20,8 @@ export const DUEL_TARGET = {
 
 export interface Target {
   id: string;
+  /** Situation label shown on the target (does not affect the score). */
+  label: string | null;
   /** Normalised 0..1 position. */
   x: number;
   y: number;
@@ -28,6 +30,7 @@ export interface Target {
 
 export interface DuelScore {
   id: string;
+  label: string | null;
   hit: boolean;
   score: number;
   reactionMs: number | null;
@@ -78,11 +81,11 @@ export class DuelTargetGame {
   }
 
   /** A duel involving the player just started. Any pending target counts as missed. */
-  spawn(id: string, nowMs: number): Target {
+  spawn(id: string, nowMs: number, label: string | null = null): Target {
     if (this.current) this.miss();
     const rng = new Rng(hashSeed(id));
     const m = DUEL_TARGET.MARGIN;
-    this.current = { id, x: m + rng.next() * (1 - 2 * m), y: m + rng.next() * (1 - 2 * m), spawnedAt: nowMs };
+    this.current = { id, label, x: m + rng.next() * (1 - 2 * m), y: m + rng.next() * (1 - 2 * m), spawnedAt: nowMs };
     return this.current;
   }
 
@@ -105,6 +108,7 @@ export class DuelTargetGame {
     const inside = distance < 1;
     const result: DuelScore = {
       id: this.current.id,
+      label: this.current.label,
       hit: true,
       score: inside ? scoreFor(reactionMs, distance) : 0,
       reactionMs,
@@ -117,7 +121,7 @@ export class DuelTargetGame {
 
   private miss(): void {
     if (!this.current) return;
-    this.results.push({ id: this.current.id, hit: false, score: 0, reactionMs: null, distance: null });
+    this.results.push({ id: this.current.id, label: this.current.label, hit: false, score: 0, reactionMs: null, distance: null });
     this.current = null;
   }
 

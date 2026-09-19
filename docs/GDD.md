@@ -337,7 +337,7 @@ Layout mobile-first (vertical), reorganiza em desktop:
 Regra: **sincronizados ao sim, opcionais, só recompensa.** Score do minigame nunca altera o log.
 
 ### 10.1 Alvo de duelo (Fase 1)
-Quando o boneco do jogador entra num duelo, um alvo aparece no canvas do minigame por ~1s. Clicar/tocar rápido e centrado = score alto. Score do minigame = média dos duelos "acompanhados". O kill feed mostra o resultado do sim normalmente. Perfect = acertou todos os duelos com tempo < 400ms.
+Quando o boneco do jogador entra num duelo (evento `duel`, 0,8s antes da resolução), um alvo aparece no canvas do minigame por 900ms. Clicar/tocar rápido e centrado = score alto: `0,6·reação (150ms=100 → 900ms=0) + 0,4·distância do centro`. Score do minigame = média dos duelos "acompanhados". O kill feed mostra o resultado do sim normalmente. Perfect = todos os duelos com score ≥ 85. O alvo mostra a `situation` do duelo como rótulo (flashado, clutch 1vN, trade, segurando ângulo) sem alterar o score. `[v1]` Ritmo: o boneco do jogador recebe **20–30 duelos por partida** (medido: ~26 com classes de bot; Rifler ~30, Âncora ~25). Em 4x o minigame desliga.
 
 ### 10.2 Ritmo (Fase 3) — estilo osu
 Sequência de alvos no ritmo da partida (eco = calmo, retake = intenso).

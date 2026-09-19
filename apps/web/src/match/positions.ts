@@ -54,8 +54,18 @@ export interface UtilBlob {
   life: number;
 }
 
+export interface DuelLine {
+  attacker: PlayerId;
+  defender: PlayerId;
+  side: Side;
+}
+
+/** Game seconds a duel line stays on the radar (the duel event leads the result by 0.8s). */
+export const DUEL_LINE_SECONDS = 0.8;
+
 export interface RadarSnapshot {
   players: PlayerDot[];
+  duels: DuelLine[];
   bomb: Pt | null;
   plantedAt: number | null;
   blobs: UtilBlob[];
@@ -143,6 +153,8 @@ export function snapshot(log: MatchLog, map: MapDef, ri: RoundIndex, t: number):
   let bomb: Pt | null = null;
   let plantedAt: number | null = null;
   const blobs: UtilBlob[] = [];
+  const duels: DuelLine[] = [];
+  const sideOfId = (id: PlayerId): Side => (sides.CT === teamOf.get(id) ? 'CT' : 'T');
   for (const e of ri.events) {
     if (e.t > t) break;
     if (isEvent(e, 'plant')) {
@@ -157,8 +169,10 @@ export function snapshot(log: MatchLog, map: MapDef, ri: RoundIndex, t: number):
       }
     } else if (isEvent(e, 'defuse')) {
       bomb = null;
+    } else if (isEvent(e, 'duel') && t < e.t + DUEL_LINE_SECONDS) {
+      duels.push({ attacker: e.attacker, defender: e.defender, side: sideOfId(e.attacker) });
     }
   }
 
-  return { players, bomb, plantedAt, blobs, sides };
+  return { players, duels, bomb, plantedAt, blobs, sides };
 }

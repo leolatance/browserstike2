@@ -97,6 +97,14 @@ export function MatchScreen() {
     }
   }
 
+  let notice: string | null = null;
+  if (!roundOver) {
+    for (const e of ri.events) {
+      if (e.t > t) break;
+      if (isEvent(e, 'defuseCancel') && t - e.t < 3) notice = 'defuse interrompido';
+    }
+  }
+
   const callLabel = useMemo(() => {
     const calls = ri.events.filter((e) => isEvent(e, 'call'));
     const tc = calls.find((c) => isEvent(c, 'call') && c.side === 'T');
@@ -150,6 +158,7 @@ export function MatchScreen() {
           callLabel={showCall ? callLabel : null}
           defuse={defuse}
           minigame={{ enabled: minigameOn, onToggle: () => setMinigameOn((v) => !v) }}
+          notice={notice}
         />
       </div>
       <div className={styles.radarArea}>
@@ -170,7 +179,7 @@ export function MatchScreen() {
       </div>
       {minigameOn && (
         <div className={styles.miniArea}>
-          <DuelTargetPanel player={player} me={MY_PLAYER} game={game} speed={state.speed} onStats={onMiniStats} />
+          <DuelTargetPanel player={player} me={MY_PLAYER} team={log.teams[teamOf.get(MY_PLAYER) ?? 0].players.map((p) => p.id)} game={game} speed={state.speed} onStats={onMiniStats} />
         </div>
       )}
       <div className={styles.feedArea}>
