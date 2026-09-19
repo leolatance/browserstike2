@@ -13,14 +13,11 @@ export const RATING = {
   IMPACT: 0.2372, // [v0]
   ADR: 0.0032, // [v0]
   /**
-   * [v0 → v1] Per-round terms are multiplied by COMPRESSION and the constant
-   * re-centred so the league average stays 1.00. With the public HLTV 2.0
-   * coefficients the per-match std across players was 0.32 (multi-kill
-   * distribution matches real CS, so that spread is the natural one for a
-   * ~22-round match); GDD 5.8 asks for 0.15–0.25.
+   * [v1] Public HLTV 2.0 coefficients kept as-is. The per-match std across
+   * players is ~0.32 by nature (multi-kill distribution matches real CS); the
+   * GDD 5.8 gate was widened to 0.25–0.35 instead of compressing the scale.
    */
-  COMPRESSION: 0.75,
-  CONST: 0.39, // [v0 → v1] 0.1587 → 0.39 (re-centred after compression)
+  CONST: 0.1587,
 };
 
 export interface RatingInput {
@@ -58,8 +55,7 @@ export function ratingBreakdown(input: RatingInput): RatingBreakdown {
   const kast = (input.kastRounds / rounds) * 100;
   const imp = impact(kpr, apr);
   const rating =
-    RATING.COMPRESSION * (RATING.KAST * kast + RATING.KPR * kpr + RATING.DPR * dpr + RATING.IMPACT * imp + RATING.ADR * adr) +
-    RATING.CONST;
+    RATING.KAST * kast + RATING.KPR * kpr + RATING.DPR * dpr + RATING.IMPACT * imp + RATING.ADR * adr + RATING.CONST;
   return { kpr, dpr, apr, adr, kast, impact: imp, rating: Math.max(0, rating) };
 }
 

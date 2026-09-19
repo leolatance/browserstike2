@@ -55,6 +55,10 @@ export const ROUND = {
   SAVE_BASE: 0.3, // [v0]
   SAVE_TATICO: 0.4, // [v0]
   WEAPON_PICKUP: 0.7, // [v0]
+  /** The loser of a duel lands some damage before dying/retreating (feeds assists and ADR). */
+  CHIP_CHANCE: 0.2, // [v1]
+  CHIP_MIN: 10, // [v1]
+  CHIP_MAX: 60, // [v1]
   FLASH_ASSIST: 0.7, // [v0]
   FLASH_USE: 0.3, // [v0] chance a side pops a flash for a duel when it has one
   SMOKE_DUEL: 0.5, // [v0]
@@ -528,6 +532,15 @@ export function simulateRound(params: RoundParams): RoundResult {
     const winner = res.winner === 'A' ? a : d;
     const loser = res.winner === 'A' ? d : a;
 
+    // Chip damage: the loser usually lands a few bullets first.
+    if (winner.hp > 1 && rng.chance(ROUND.CHIP_CHANCE)) {
+      const chip = Math.min(winner.hp - 1, rng.int(ROUND.CHIP_MIN, ROUND.CHIP_MAX));
+      emit({ type: 'damage', round, t, attacker: loser.rp.id, victim: winner.rp.id, amount: chip, weapon: loser.rp.inv.weapon, area: o.area });
+      winner.hp -= chip;
+      winner.damagedBy.push(loser.rp.id);
+      loser.damage += chip;
+    }
+
     if (res.loserSurvived) {
       emit({ type: 'damage', round, t, attacker: winner.rp.id, victim: loser.rp.id, amount: res.damage, weapon: winner.rp.inv.weapon, area: o.area });
       winner.damage += res.damage;
@@ -957,7 +970,10 @@ function chooseTCall(rng: Rng, igl: Live | undefined, setup: CTSetup, buy: BuyTy
   const def = defendersBySetup(setup, ctEco);
   const weaker: SiteId | null = def.A < def.B ? 'A' : def.B < def.A ? 'B' : null;
   let target: SiteId;
-  if (igl) {
+  if (ctEco && setup !== 'default' && setup !== 'aggressive') {
+    // An eco stack is a gamble nobody can read before contact: coin flip.
+    target = rng.pick(['A', 'B'] as SiteId[]);
+  } else if (igl) {
     const read = rng.chance(ROUND.READ_BASE + ROUND.READ_TATICO * (igl.attrs.tatico / 100));
     target = read && weaker ? weaker : rng.pick(['A', 'B'] as SiteId[]);
   } else if (weaker && rng.chance(ROUND.NO_IGL_BAD_PICK)) {

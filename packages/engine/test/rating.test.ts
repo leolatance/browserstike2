@@ -11,7 +11,7 @@ describe('rating (GDD 8.2)', () => {
     const adr = 1800 / 24;
     const kast = (17 / 24) * 100;
     const imp = 2.13 * kpr + 0.42 * apr - 0.41;
-    const expected = RATING.COMPRESSION * (0.0073 * kast + 0.3591 * kpr - 0.5329 * dpr + 0.2372 * imp + 0.0032 * adr) + RATING.CONST;
+    const expected = 0.0073 * kast + 0.3591 * kpr - 0.5329 * dpr + 0.2372 * imp + 0.0032 * adr + 0.1587;
     expect(impact(kpr, apr)).toBeCloseTo(imp, 6);
     expect(matchRating(input)).toBeCloseTo(expected, 6);
     const b = ratingBreakdown(input);

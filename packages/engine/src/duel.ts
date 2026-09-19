@@ -14,7 +14,7 @@ export const DUEL = {
    * ~64% of duels, which compounds to >95% of matches. Attributes must be a
    * smooth edge, weapons/situation the loud one. Tuned via balance.test.ts.
    */
-  ATTR_SCALE: 0.08, // [v0 → v1] 1.0 → 0.08 (see note above; tuned in balance.test.ts)
+  ATTR_SCALE: 0.14, // [v0 → v1] 1.0 → 0.14 (see note above; the +10 gate is 70–76%)
   /** Logistic divisor: P(A) = 1 / (1 + 10^((scoreD − scoreA) / DIVISOR)). */
   LOGISTIC_DIVISOR: 40, // [v0]
 

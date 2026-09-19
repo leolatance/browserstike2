@@ -54,12 +54,14 @@ describe('economy.decideTeamBuy', () => {
     expect(decideTeamBuy({ side: 'T', players: saved, lossStreak: 0, tatico: 100, pistol: false }, rng)).toBe('full');
   });
 
-  it('Tático 0 is wrong about half the time', () => {
+  it('Tático 0 is wrong about half the time, and a wrong call is the neighbouring option', () => {
     const rng = new Rng(7);
     let wrong = 0;
     const n = 4000;
     for (let i = 0; i < n; i++) {
-      if (decideTeamBuy({ side: 'CT', players: five(6000, 'CT'), lossStreak: 0, tatico: 0, pistol: false }, rng) !== 'full') wrong++;
+      const d = decideTeamBuy({ side: 'CT', players: five(6000, 'CT'), lossStreak: 0, tatico: 0, pistol: false }, rng);
+      if (d !== 'full') wrong++;
+      expect(d).not.toBe('eco');
     }
     expect(wrong / n).toBeGreaterThan(0.45);
     expect(wrong / n).toBeLessThan(0.55);

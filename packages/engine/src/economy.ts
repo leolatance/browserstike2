@@ -80,6 +80,9 @@ export const FORCE_MIN_LOSS_STREAK = 2; // [v0]
 export const ECON = {
   /** P(wrong team buy) = (100 − tatico) / BUY_MISTAKE_DIVISOR. GDD 5.4: 200. */
   BUY_MISTAKE_DIVISOR: 200, // [v0]
+  /** Eco purchases: full save below ECO_P250_MONEY. [v1] */
+  ECO_P250_MONEY: 1500,
+  ECO_DEAGLE_MONEY: 2400,
 };
 
 export interface TeamBuyInput {
@@ -108,8 +111,10 @@ export function decideTeamBuy(input: TeamBuyInput, rng: Rng): BuyType {
 
   const mistake = (100 - input.tatico) / ECON.BUY_MISTAKE_DIVISOR;
   if (rng.chance(mistake)) {
-    const others = (['full', 'force', 'eco'] as BuyType[]).filter((d) => d !== decision);
-    decision = rng.pick(others);
+    // [v1] A wrong call lands on the neighbouring option (full↔force↔eco):
+    // nobody with $4000 each "accidentally" saves.
+    if (decision === 'force') decision = rng.pick(['full', 'eco'] as BuyType[]);
+    else decision = 'force';
   }
   return decision;
 }
@@ -220,8 +225,11 @@ export function buyForPlayer(input: PurchaseInput, rng: Rng): Purchase {
       break;
     }
     case 'eco': {
-      // Save. A cheap pistol upgrade when the loss bonus makes it painless. [v0]
-      if (!ownsRifle() && money >= 1200 && rng.chance(0.6)) buyWeapon(weapon('p250'));
+      // Save. Below $1500 nothing is bought (pistol-round losers); with a real
+      // loss bonus a P250, and on a rich eco sometimes a Deagle. [v1]
+      if (ownsRifle()) break;
+      if (money >= ECON.ECO_DEAGLE_MONEY && rng.chance(0.5)) buyWeapon(weapon('deagle'));
+      else if (money >= ECON.ECO_P250_MONEY && rng.chance(0.6)) buyWeapon(weapon('p250'));
       break;
     }
     case 'force': {
