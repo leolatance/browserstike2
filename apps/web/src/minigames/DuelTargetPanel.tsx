@@ -39,7 +39,7 @@ export function situationLabel(e: DuelEvent, me: string, team: string[], events:
   return null;
 }
 
-const EMPTY: DuelTargetStats = { last: null, average: 0, accompanied: 0, total: 0, streak: 0, perfect: false };
+const EMPTY: DuelTargetStats = { last: null, average: 0, averageAll: 0, accompanied: 0, total: 0, streak: 0, perfect: false };
 
 export function DuelTargetPanel({ player, me, team, game, speed, onStats }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -85,7 +85,7 @@ export function DuelTargetPanel({ player, me, team, game, speed, onStats }: Prop
       const target = game.target;
       if (!target) return;
       const now = performance.now();
-      const life = Math.min(1, (now - target.spawnedAt) / DUEL_TARGET.VISIBLE_MS);
+      const life = Math.min(1, (now - target.spawnedAt) / game.visibleMs);
       const r = DUEL_TARGET.RADIUS * Math.min(w, h);
       const x = target.x * w;
       const y = target.y * h;

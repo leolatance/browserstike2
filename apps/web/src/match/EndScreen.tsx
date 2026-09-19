@@ -6,11 +6,12 @@ import styles from './EndScreen.module.css';
 interface Props {
   log: MatchLog;
   minigame: DuelTargetStats | null;
+  leaveLabel: string;
   onReplay: () => void;
-  onNewMatch: () => void;
+  onLeave: () => void;
 }
 
-export function EndScreen({ log, minigame, onReplay, onNewMatch }: Props) {
+export function EndScreen({ log, minigame, leaveLabel, onReplay, onLeave }: Props) {
   const nick = (id: string) => log.teams.flatMap((t) => t.players).find((p) => p.id === id)?.nick ?? id;
   const top = log.stats.slice().sort((a, b) => b.rating - a.rating).slice(0, 3);
   const mvp = log.stats.filter((s) => s.team === log.winner).sort((a, b) => b.rating - a.rating)[0];
@@ -63,8 +64,8 @@ export function EndScreen({ log, minigame, onReplay, onNewMatch }: Props) {
         )}
         <div className={styles.actions}>
           <button onClick={onReplay}>Rever</button>
-          <button className="primary" onClick={onNewMatch}>
-            Nova partida
+          <button className="primary" onClick={onLeave}>
+            {leaveLabel}
           </button>
         </div>
       </div>

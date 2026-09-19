@@ -1,19 +1,87 @@
-import { ENGINE_VERSION } from '@idle-strike/engine';
-import { MatchScreen } from './screens/MatchScreen.tsx';
+import type { ReactNode } from 'react';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { getCharacter } from './store/character';
+import { useQuery } from './store/useQuery';
+import { Lobby } from './screens/Lobby';
+import { MatchScreen } from './screens/MatchScreen';
+import { Onboarding } from './screens/Onboarding';
+import { Profile } from './screens/Profile';
+import { Queue } from './screens/Queue';
+import { Result } from './screens/Result';
+import { Training } from './screens/Training';
 
-// Minimal routing for now: only /match exists. Lobby/profile/training come later.
+/** Redirects to onboarding until a character exists. */
+function RequireCharacter({ children }: { children: ReactNode }) {
+  const { data, loading } = useQuery(getCharacter);
+  if (loading) return null;
+  if (!data) return <Navigate to="/onboarding" replace />;
+  return <>{children}</>;
+}
+
+function OnboardingGate() {
+  const { data, loading } = useQuery(getCharacter);
+  if (loading) return null;
+  if (data) return <Navigate to="/lobby" replace />;
+  return <Onboarding />;
+}
+
 export function App() {
-  const path = window.location.pathname.replace(/\/+$/, '') || '/';
-  if (path === '/match') return <MatchScreen />;
   return (
-    <main style={{ padding: 24, maxWidth: 520, margin: '0 auto' }}>
-      <h1 style={{ margin: '0 0 8px' }}>Idle Strike 2</h1>
-      <p style={{ color: 'var(--text-1)' }}>engine v{ENGINE_VERSION}. Só a tela de partida existe nesta etapa.</p>
-      <p>
-        <a href="/match?seed=42">Assistir partida (seed 42)</a>
-        {' · '}
-        <a href={`/match?seed=${Math.floor(Math.random() * 100000)}`}>seed aleatória</a>
-      </p>
-    </main>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Navigate to="/lobby" replace />} />
+        <Route path="/onboarding" element={<OnboardingGate />} />
+        <Route
+          path="/lobby"
+          element={
+            <RequireCharacter>
+              <Lobby />
+            </RequireCharacter>
+          }
+        />
+        <Route
+          path="/treino"
+          element={
+            <RequireCharacter>
+              <Training mode="treino" />
+            </RequireCharacter>
+          }
+        />
+        <Route
+          path="/dm"
+          element={
+            <RequireCharacter>
+              <Training mode="dm" />
+            </RequireCharacter>
+          }
+        />
+        <Route
+          path="/queue"
+          element={
+            <RequireCharacter>
+              <Queue />
+            </RequireCharacter>
+          }
+        />
+        <Route path="/match" element={<MatchScreen />} />
+        <Route
+          path="/perfil"
+          element={
+            <RequireCharacter>
+              <Profile />
+            </RequireCharacter>
+          }
+        />
+        <Route
+          path="/resultado"
+          element={
+            <RequireCharacter>
+              <Result />
+            </RequireCharacter>
+          }
+        />
+        <Route path="*" element={<Navigate to="/lobby" replace />} />
+      </Routes>
+    </BrowserRouter>
   );
 }

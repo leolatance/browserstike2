@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   MAP01,
   Rng,
@@ -21,11 +22,12 @@ import { CT_SETUP_LABEL, REASON_LABEL, T_CALL_LABEL } from '../match/format';
 import { liveStats } from '../match/stats';
 import { useReplay } from '../match/useReplay';
 import { DuelTargetGame, type DuelTargetStats } from '../minigames/duelTarget';
+import { getMatch } from '../store/matches';
+import { getOutcome, peekPendingMatch, setOutcome, type MatchSource } from '../store/pending';
+import { getSetting, setSetting } from '../store/settings';
 import { DuelTargetPanel } from '../minigames/DuelTargetPanel';
 import styles from './MatchScreen.module.css';
 
-/** The user's character: fixed to team A's first player for now. */
-const MY_PLAYER = 'a1';
 const FEED_SIZE = 6;
 /** Seconds of action during which the call label stays in the header. */
 const CALL_LABEL_SECONDS = 15;
@@ -36,12 +38,51 @@ function seedFromUrl(): number {
   return Number.isFinite(n) ? Math.floor(n) : 42;
 }
 
+/** Where the match comes from: the queue hand-off, a saved match (?replay=id) or a dev seed (?seed=n). */
+function useMatchSource(): MatchSource | null {
+  const [source, setSource] = useState<MatchSource | null>(null);
+  useEffect(() => {
+    const pending = peekPendingMatch();
+    if (pending) {
+      setSource(pending);
+      return;
+    }
+    const params = new URLSearchParams(window.location.search);
+    const replay = params.get('replay');
+    if (replay) {
+      getMatch(Number(replay)).then((m) => {
+        if (!m) return setSource(devSource(seedFromUrl()));
+        setSource({ kind: 'replay', seed: m.seed, config: m.config, myId: m.myId, myTeam: m.myTeam, matchId: m.id as number });
+      });
+      return;
+    }
+    // Same tab, refreshed after finishing: keep showing the last outcome's match.
+    const last = getOutcome();
+    if (last) {
+      setSource({ ...last.source, kind: last.source.kind === 'queue' ? 'replay' : last.source.kind });
+      return;
+    }
+    setSource(devSource(seedFromUrl()));
+  }, []);
+  return source;
+}
+
+function devSource(seed: number): MatchSource {
+  const teams = generateBotMatchup(new Rng(seed), 50, 50);
+  return { kind: 'dev', seed, config: { mapId: MAP01.id, teams, startingCT: 0 }, myId: 'a1', myTeam: 0 };
+}
+
 export function MatchScreen() {
-  const seed = useMemo(seedFromUrl, []);
-  const log = useMemo(() => {
-    const teams = generateBotMatchup(new Rng(seed), 50, 50);
-    return simulateMatch({ map: MAP01, teams }, seed);
-  }, [seed]);
+  const source = useMatchSource();
+  if (!source) return <div style={{ padding: 16, color: 'var(--text-2)' }}>carregando partida…</div>;
+  return <MatchView source={source} />;
+}
+
+function MatchView({ source }: { source: MatchSource }) {
+  const nav = useNavigate();
+  const seed = source.seed;
+  const MY_PLAYER = source.myId;
+  const log = useMemo(() => simulateMatch({ map: MAP01, teams: source.config.teams, startingCT: source.config.startingCT }, seed), [source, seed]);
 
   const { player, state } = useReplay(log);
   // Dev-only hook so the log can be inspected from the browser console.
@@ -51,11 +92,24 @@ export function MatchScreen() {
   const inFreezetime = t < freezeEnd;
   const roundOver = t >= ri.end.t;
 
-  // Minigame state lives in memory only (no persistence yet).
-  const [minigameOn, setMinigameOn] = useState(true);
+  // Minigame toggle is persisted in settings; the game itself lives in memory.
+  const [minigameOn, setMinigameOnState] = useState(true);
+  useEffect(() => {
+    getSetting('minigame').then(setMinigameOnState);
+  }, []);
+  const setMinigameOn = (v: boolean) => {
+    setMinigameOnState(v);
+    void setSetting('minigame', v);
+  };
   const game = useMemo(() => new DuelTargetGame(), [log]);
   const [miniStats, setMiniStats] = useState<DuelTargetStats | null>(null);
   const onMiniStats = useCallback((s: DuelTargetStats) => setMiniStats(s), []);
+
+  // Hand the finished match to /resultado (queue) — never rewards a replay.
+  useEffect(() => {
+    if (!state.finished) return;
+    if (source.kind === 'queue') setOutcome({ source, log, minigame: minigameOn ? game.stats() : null });
+  }, [state.finished, source, log, minigameOn, game]);
   // Dev-only hook so the log can be inspected from the browser console.
   if (import.meta.env.DEV) (window as unknown as { __match?: unknown }).__match = { log, player, game };
 
@@ -138,10 +192,12 @@ export function MatchScreen() {
     ? `${ri.end.winner} vence · ${REASON_LABEL[ri.end.reason] ?? ri.end.reason}${ri.end.clutch ? ` · clutch 1v${ri.end.clutch.vs}` : ''}${ri.end.ace ? ' · ACE' : ''}`
     : null;
 
-  const newMatch = useCallback(() => {
-    const next = Math.floor(Math.random() * 1_000_000);
-    window.location.assign(`/match?seed=${next}`);
-  }, []);
+  const leave = useCallback(() => {
+    if (source.kind === 'queue') nav('/resultado');
+    else if (source.kind === 'replay') nav('/perfil');
+    else window.location.assign(`/match?seed=${Math.floor(Math.random() * 1_000_000)}`);
+  }, [source.kind, nav]);
+  const leaveLabel = source.kind === 'queue' ? 'Ver resultado' : source.kind === 'replay' ? 'Voltar ao perfil' : 'Nova partida';
 
   return (
     <div className={styles.screen}>
@@ -157,7 +213,7 @@ export function MatchScreen() {
           result={result}
           callLabel={showCall ? callLabel : null}
           defuse={defuse}
-          minigame={{ enabled: minigameOn, onToggle: () => setMinigameOn((v) => !v) }}
+          minigame={{ enabled: minigameOn, onToggle: () => setMinigameOn(!minigameOn) }}
           notice={notice}
         />
       </div>
@@ -174,7 +230,9 @@ export function MatchScreen() {
             onNextRound={() => player.nextRound()}
             onSkipToEnd={() => player.skipToEnd()}
           />
-          <span className={`${styles.meta} mono`}>seed {seed}</span>
+          <span className={`${styles.meta} mono`}>
+            {source.kind === 'replay' ? 'replay · ' : ''}seed {seed}
+          </span>
         </div>
       </div>
       {minigameOn && (
@@ -190,11 +248,17 @@ export function MatchScreen() {
         <Scoreboard rows={rows} teamNames={teamNames} highlight={MY_PLAYER} />
       </div>
       {state.finished && (
-        <EndScreen log={log} minigame={minigameOn ? (miniStats ?? game.stats()) : null} onReplay={() => {
+        <EndScreen
+          log={log}
+          minigame={minigameOn ? (miniStats ?? game.stats()) : null}
+          leaveLabel={leaveLabel}
+          onReplay={() => {
             game.reset();
             setMiniStats(null);
             player.restart();
-          }} onNewMatch={newMatch} />
+          }}
+          onLeave={leave}
+        />
       )}
     </div>
   );

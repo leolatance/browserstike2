@@ -69,3 +69,18 @@
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
+
+.tall {
+  aspect-ratio: 4 / 3;
+  min-height: 260px;
+}
+
+.timer {
+  position: absolute;
+  left: 10px;
+  top: 6px;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-1);
+  pointer-events: none;
+}

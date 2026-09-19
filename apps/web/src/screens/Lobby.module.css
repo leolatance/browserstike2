@@ -1,0 +1,90 @@
+.hero {
+  gap: 12px;
+}
+
+.identity {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.who {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.nick {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.flag {
+  font-size: 16px;
+}
+
+.level {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+}
+
+.xpTrack {
+  height: 8px;
+  background: var(--bg-3);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.xpFill {
+  height: 100%;
+  background: var(--ct);
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.action {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px;
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--text-0);
+  text-decoration: none;
+  min-height: 64px;
+}
+
+.action span {
+  color: var(--text-2);
+  font-size: 11px;
+}
+
+.action:hover {
+  border-color: var(--line-strong);
+}
+
+.primary {
+  grid-column: 1 / -1;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #111;
+}
+
+.primary span {
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

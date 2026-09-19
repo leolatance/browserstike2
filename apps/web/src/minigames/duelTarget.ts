@@ -42,6 +42,8 @@ export interface DuelTargetStats {
   last: DuelScore | null;
   /** Mean score over accompanied duels (0 when none). */
   average: number;
+  /** Mean over ALL targets, misses count as 0 (training multiplier). */
+  averageAll: number;
   accompanied: number;
   total: number;
   /** Consecutive accompanied duels, counted from the latest. */
@@ -59,8 +61,8 @@ export function hashSeed(id: string): number {
   return h >>> 0;
 }
 
-export function scoreFor(reactionMs: number, distance: number): number {
-  const r = 100 * (1 - (reactionMs - DUEL_TARGET.MIN_REACTION_MS) / (DUEL_TARGET.VISIBLE_MS - DUEL_TARGET.MIN_REACTION_MS));
+export function scoreFor(reactionMs: number, distance: number, visibleMs = DUEL_TARGET.VISIBLE_MS): number {
+  const r = 100 * (1 - (reactionMs - DUEL_TARGET.MIN_REACTION_MS) / (visibleMs - DUEL_TARGET.MIN_REACTION_MS));
   const d = 100 * (1 - distance);
   const clamp = (v: number) => Math.max(0, Math.min(100, v));
   return Math.round(DUEL_TARGET.W_REACTION * clamp(r) + DUEL_TARGET.W_DISTANCE * clamp(d));
@@ -69,6 +71,8 @@ export function scoreFor(reactionMs: number, distance: number): number {
 export class DuelTargetGame {
   readonly results: DuelScore[] = [];
   private current: Target | null = null;
+
+  constructor(readonly visibleMs: number = DUEL_TARGET.VISIBLE_MS) {}
 
   get target(): Target | null {
     return this.current;
@@ -91,7 +95,7 @@ export class DuelTargetGame {
 
   /** Expire the target when its window is over. Returns true if it just expired. */
   tick(nowMs: number): boolean {
-    if (this.current && nowMs - this.current.spawnedAt >= DUEL_TARGET.VISIBLE_MS) {
+    if (this.current && nowMs - this.current.spawnedAt >= this.visibleMs) {
       this.miss();
       return true;
     }
@@ -110,7 +114,7 @@ export class DuelTargetGame {
       id: this.current.id,
       label: this.current.label,
       hit: true,
-      score: inside ? scoreFor(reactionMs, distance) : 0,
+      score: inside ? scoreFor(reactionMs, distance, this.visibleMs) : 0,
       reactionMs,
       distance,
     };
@@ -132,6 +136,7 @@ export class DuelTargetGame {
     return {
       last: this.results[this.results.length - 1] ?? null,
       average: hits.length ? Math.round(hits.reduce((s, r) => s + r.score, 0) / hits.length) : 0,
+      averageAll: this.results.length ? Math.round(this.results.reduce((s, r) => s + r.score, 0) / this.results.length) : 0,
       accompanied: hits.length,
       total: this.results.length,
       streak,

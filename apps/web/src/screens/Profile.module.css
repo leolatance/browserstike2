@@ -1,0 +1,48 @@
+.chart {
+  width: 100%;
+  display: block;
+  border-radius: var(--radius);
+}
+
+.match {
+  display: grid;
+  grid-template-columns: 22px 44px 1fr 44px 44px auto;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.match button {
+  min-height: 30px;
+  padding: 2px 8px;
+  font-size: 12px;
+}
+
+.result {
+  font-weight: 800;
+}
+
+.win {
+  color: var(--ok);
+}
+
+.loss {
+  color: var(--danger);
+}
+
+.score {
+  font-weight: 700;
+}
+
+.opp {
+  color: var(--text-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rating {
+  font-weight: 700;
+}
