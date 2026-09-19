@@ -17,7 +17,7 @@ export function Scoreboard({ rows, teamNames, highlight }: Props) {
         Scoreboard <span className={styles.chev}>{expanded ? '▴' : '▾'}</span>
       </button>
       {groups.map((teamIdx) => {
-        const team = rows.filter((r) => r.team === teamIdx).sort((a, b) => b.rating - a.rating || b.kills - a.kills);
+        const team = rows.filter((r) => r.team === teamIdx).sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0) || b.kills - a.kills);
         const side = team[0]?.side ?? 'CT';
         return (
           <table key={teamIdx} className={`${styles.table} ${expanded ? styles.expanded : ''}`}>
@@ -45,7 +45,7 @@ export function Scoreboard({ rows, teamNames, highlight }: Props) {
                   <td className="mono">{r.deaths}</td>
                   {expanded && <td className="mono">{r.assists}</td>}
                   {expanded && <td className="mono">{r.adr.toFixed(0)}</td>}
-                  <td className={`mono ${styles.rating}`}>{r.rating > 0 ? r.rating.toFixed(2) : '–'}</td>
+                  <td className={`mono ${styles.rating}`}>{r.rating === null ? '–' : r.rating.toFixed(2)}</td>
                 </tr>
               ))}
             </tbody>

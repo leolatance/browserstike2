@@ -7,8 +7,8 @@ export interface HeaderProps {
   score: [number, number];
   /** Team index playing CT this round. */
   ctTeam: 0 | 1;
-  round: number;
-  totalRounds: number;
+  /** Label such as "round 7" or "OT 2". Never derived from the future. */
+  roundLabel: string;
   /** Seconds left on the round clock (or on the bomb when planted). */
   secondsLeft: number;
   planted: boolean;
@@ -41,7 +41,7 @@ export function Header(p: HeaderProps) {
           {clock(p.secondsLeft)}
         </div>
         <div className={styles.round}>
-          {p.result ? p.result : `round ${p.round}/${p.totalRounds}`}
+          {p.result ? p.result : p.roundLabel}
         </div>
       </div>
       <div className={`${styles.team} ${styles.t}`}>

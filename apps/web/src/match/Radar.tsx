@@ -82,23 +82,25 @@ export function Radar({ player, map, highlight }: Props) {
         ctx.lineWidth = 1;
         ctx.stroke();
       }
-      // Labels
+      // Labels: site letters as big watermarks, area names small and faint.
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       for (const a of map.areas) {
         const cx = a.polygon.reduce((s, p) => s + p[0], 0) / a.polygon.length;
         const cy = a.polygon.reduce((s, p) => s + p[1], 0) / a.polygon.length;
         if (siteAreas.has(a.id)) {
+          const ys = a.polygon.map((p) => p[1]);
+          const h = Math.max(...ys) - Math.min(...ys);
           ctx.fillStyle = c.label;
-          ctx.font = `700 ${Math.max(14, size * 0.05)}px ${cssVar('--font')}`;
-          ctx.globalAlpha = 0.55;
-          ctx.fillText(a.id === map.sites.A.plant ? 'A' : 'B', P(cx), P(cy) - size * 0.03);
+          ctx.font = `800 ${P(h) * 0.85}px ${cssVar('--font')}`;
+          ctx.globalAlpha = 0.14;
+          ctx.fillText(a.id === map.sites.A.plant ? 'A' : 'B', P(cx), P(cy));
           ctx.globalAlpha = 1;
         } else if (size >= 300) {
           ctx.fillStyle = c.label;
-          ctx.font = `500 ${Math.max(9, size * 0.021)}px ${cssVar('--font')}`;
-          ctx.globalAlpha = 0.7;
-          ctx.fillText(a.id === map.mid.contact ? 'MID' : a.name, P(cx), P(cy) + (siteAreas.has(a.id) ? size * 0.03 : 0));
+          ctx.font = `500 ${Math.max(8, size * 0.015)}px ${cssVar('--font')}`;
+          ctx.globalAlpha = 0.45;
+          ctx.fillText(a.id === map.mid.contact ? 'MID' : a.name, P(cx), P(cy));
           ctx.globalAlpha = 1;
         }
       }
@@ -181,12 +183,56 @@ export function Radar({ player, map, highlight }: Props) {
           ctx.strokeStyle = c.text;
           ctx.lineWidth = 2;
           ctx.stroke();
+        }
+        if (p.id === highlight || p.id === hovered) {
           ctx.fillStyle = c.text;
           ctx.font = `600 ${Math.max(9, size * 0.022)}px ${cssVar('--font')}`;
           ctx.fillText(p.nick, x, y - r - size * 0.02);
         }
       }
+      lastDots = snap.players.map((p) => ({ id: p.id, x: P(p.x), y: P(p.y), alive: p.alive }));
     };
+
+    // Hover (desktop) / tap (mobile) shows the nick of the nearest dot.
+    let hovered: string | null = null;
+    let lastDots: { id: string; x: number; y: number; alive: boolean }[] = [];
+    const pick = (ev: PointerEvent): string | null => {
+      const rect = canvas.getBoundingClientRect();
+      const x = ev.clientX - rect.left;
+      const y = ev.clientY - rect.top;
+      let best: string | null = null;
+      let bestD = Math.max(14, size * 0.04);
+      for (const d of lastDots) {
+        const dist = Math.hypot(d.x - x, d.y - y);
+        if (dist < bestD) {
+          bestD = dist;
+          best = d.id;
+        }
+      }
+      return best;
+    };
+    const onMove = (ev: PointerEvent) => {
+      if (ev.pointerType === 'touch') return;
+      const id = pick(ev);
+      if (id !== hovered) {
+        hovered = id;
+        draw();
+      }
+    };
+    const onDown = (ev: PointerEvent) => {
+      const id = pick(ev);
+      hovered = id === hovered ? null : id;
+      draw();
+    };
+    const onLeave = () => {
+      if (hovered !== null) {
+        hovered = null;
+        draw();
+      }
+    };
+    canvas.addEventListener('pointermove', onMove);
+    canvas.addEventListener('pointerdown', onDown);
+    canvas.addEventListener('pointerleave', onLeave);
 
     const unsubscribe = player.subscribe(draw);
     const ro = new ResizeObserver(resize);
@@ -195,6 +241,9 @@ export function Radar({ player, map, highlight }: Props) {
     return () => {
       unsubscribe();
       ro.disconnect();
+      canvas.removeEventListener('pointermove', onMove);
+      canvas.removeEventListener('pointerdown', onDown);
+      canvas.removeEventListener('pointerleave', onLeave);
     };
   }, [player, map, highlight]);
 

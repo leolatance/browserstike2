@@ -23,14 +23,14 @@ export const MAP01: MapDef = {
     { id: 't_spawn', name: 'Spawn T', polygon: [[40, 780], [300, 780], [300, 990], [40, 990]], range: 'long' },
     { id: 'long_doors', name: 'Portões do Longo', polygon: [[40, 620], [200, 620], [200, 780], [40, 780]], range: 'short' },
     { id: 'long', name: 'Longo', polygon: [[40, 220], [200, 220], [200, 620], [40, 620]], range: 'long' },
-    { id: 'a_ramp', name: 'Rampa A', polygon: [[200, 160], [380, 160], [380, 300], [200, 300]], range: 'mid' },
-    { id: 't_mid', name: 'Rampa do Meio', polygon: [[300, 700], [480, 700], [480, 860], [300, 860]], range: 'mid' },
-    { id: 'outside_tuns', name: 'Boca do Túnel', polygon: [[480, 780], [700, 780], [700, 990], [480, 990]], range: 'short' },
-    { id: 'b_tuns', name: 'Túneis', polygon: [[700, 620], [860, 620], [860, 990], [700, 990]], range: 'short' },
+    { id: 'a_ramp', name: 'Rampa A', polygon: [[200, 160], [310, 160], [310, 300], [200, 300]], range: 'mid' },
+    { id: 't_mid', name: 'Rampa do Meio', polygon: [[300, 700], [410, 700], [410, 860], [300, 860]], range: 'mid' },
+    { id: 'outside_tuns', name: 'Boca do Túnel', polygon: [[480, 780], [750, 780], [750, 990], [480, 990]], range: 'short' },
+    { id: 'b_tuns', name: 'Túneis', polygon: [[750, 620], [860, 620], [860, 990], [750, 990]], range: 'short' },
 
     // Middle
     { id: 'mid', name: 'Meio', polygon: [[380, 380], [560, 380], [560, 700], [380, 700]], range: 'long' },
-    { id: 'a_short', name: 'Passarela', polygon: [[380, 160], [560, 160], [560, 380], [380, 380]], range: 'mid' },
+    { id: 'a_short', name: 'Passarela', polygon: [[440, 160], [560, 160], [560, 380], [440, 380]], range: 'mid' },
     { id: 'ct_mid', name: 'Meio CT', polygon: [[560, 380], [740, 380], [740, 560], [560, 560]], range: 'mid' },
 
     // Sites & CT side

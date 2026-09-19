@@ -9,4 +9,5 @@
 
 .canvas {
   display: block;
+  touch-action: manipulation;
 }

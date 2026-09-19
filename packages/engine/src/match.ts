@@ -178,6 +178,8 @@ export function simulateMatch(config: MatchConfig, seed: number): MatchLog {
     mapId: map.id,
     teams,
     startingSides: { CT: startingCT, T: startingCT === 0 ? 1 : 0 },
+    mr,
+    otMr,
     events,
     rounds,
     score,

@@ -15,7 +15,8 @@ export interface LiveRow {
   deaths: number;
   assists: number;
   adr: number;
-  rating: number;
+  /** null until a round has been completed. */
+  rating: number | null;
   alive: boolean;
 }
 
@@ -99,7 +100,7 @@ export function liveStats(log: MatchLog, rounds: RoundIndex[], roundIdx: number,
         deaths: a.deaths,
         assists: a.assists,
         adr: completedRounds === 0 ? 0 : b.adr,
-        rating: completedRounds === 0 ? 0 : b.rating,
+        rating: completedRounds === 0 ? null : b.rating,
         alive: aliveNow.has(p.id),
       });
     }

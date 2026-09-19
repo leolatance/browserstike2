@@ -80,8 +80,7 @@ export function MatchScreen() {
           teamNames={teamNames}
           score={[ri.start.score[0], ri.start.score[1]].map((v, i) => (roundOver && ri.end.winnerTeam === i ? v + 1 : v)) as [number, number]}
           ctTeam={ri.start.sides.CT}
-          round={ri.round}
-          totalRounds={log.rounds.length}
+          roundLabel={ri.round > 2 * log.mr ? `OT ${ri.round - 2 * log.mr}` : `round ${ri.round}`}
           secondsLeft={secondsLeft}
           planted={Boolean(plant) && !roundOver}
           econ={econ}

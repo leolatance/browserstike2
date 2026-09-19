@@ -204,6 +204,9 @@ export interface MatchLog {
   teams: [MatchLogTeam, MatchLogTeam];
   /** Team index that started as CT / T. */
   startingSides: Record<Side, 0 | 1>;
+  /** Rounds per regulation half / per overtime half. */
+  mr: number;
+  otMr: number;
   events: MatchEvent[];
   rounds: RoundSummary[];
   /** Final score: [team 0, team 1]. */
