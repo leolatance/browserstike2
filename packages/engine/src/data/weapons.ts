@@ -31,12 +31,12 @@ export const KILL_REWARD = {
   pistol: 300,
 } as const satisfies Record<WeaponClass, number>;
 
-// Range modifiers [v0] (GDD 5.4): AWP +18 long / -10 short; rifle 0;
-// SMG -6 (+6 short); pistol -18.
+// Range modifiers (GDD 5.4): AWP +18 long / -10 short; rifle 0; SMG -6 (+6 short).
+// [v0 → v1] pistol -18 → -15 (all pistols +3): eco vs full buy sat at ~11%, target 12–20%.
 const RIFLE_MOD: Record<Range, number> = { short: 0, mid: 0, long: 0 };
 const SMG_MOD: Record<Range, number> = { short: 6, mid: -6, long: -6 };
 const AWP_MOD: Record<Range, number> = { short: -10, mid: 4, long: 18 };
-const PISTOL_MOD: Record<Range, number> = { short: -18, mid: -18, long: -18 };
+const PISTOL_MOD: Record<Range, number> = { short: -15, mid: -15, long: -15 };
 
 export const WEAPONS: readonly Weapon[] = [
   { id: 'knife', name: 'Faca', class: 'knife', price: 0, killReward: KILL_REWARD.knife, rangeMod: { short: -40, mid: -60, long: -80 }, side: 'both', tier: 0 },
@@ -44,8 +44,8 @@ export const WEAPONS: readonly Weapon[] = [
   // Pistols
   { id: 'glock', name: 'Glock', class: 'pistol', price: 200, killReward: KILL_REWARD.pistol, rangeMod: PISTOL_MOD, side: 'T', tier: 1 },
   { id: 'usp', name: 'USP', class: 'pistol', price: 200, killReward: KILL_REWARD.pistol, rangeMod: PISTOL_MOD, side: 'CT', tier: 1 },
-  { id: 'p250', name: 'P250', class: 'pistol', price: 300, killReward: KILL_REWARD.pistol, rangeMod: { short: -15, mid: -16, long: -18 }, side: 'both', tier: 2 },
-  { id: 'deagle', name: 'Deagle', class: 'pistol', price: 700, killReward: KILL_REWARD.pistol, rangeMod: { short: -13, mid: -12, long: -12 }, side: 'both', tier: 3 },
+  { id: 'p250', name: 'P250', class: 'pistol', price: 300, killReward: KILL_REWARD.pistol, rangeMod: { short: -12, mid: -13, long: -15 }, side: 'both', tier: 2 },
+  { id: 'deagle', name: 'Deagle', class: 'pistol', price: 700, killReward: KILL_REWARD.pistol, rangeMod: { short: -10, mid: -9, long: -9 }, side: 'both', tier: 3 },
 
   // SMGs
   { id: 'mac10', name: 'MAC-10', class: 'smg', price: 1050, killReward: KILL_REWARD.smg, rangeMod: SMG_MOD, side: 'T', tier: 4 },
@@ -99,5 +99,5 @@ export const GEAR = {
   he: 300,
 } as const;
 
-/** Duel score penalty for having no armor. [v0] GDD 5.4 */
-export const NO_ARMOR_PENALTY = -8;
+/** Duel score penalty for having no armor. [v0 → v1] GDD 5.4 said −8; eco rounds won only ~10%. */
+export const NO_ARMOR_PENALTY = -5;

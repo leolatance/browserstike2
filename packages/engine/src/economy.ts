@@ -77,6 +77,11 @@ export function fullBuyFloor(side: Side): number {
 export const FORCE_AVG_MONEY = 2000; // [v0]
 export const FORCE_MIN_LOSS_STREAK = 2; // [v0]
 
+export const ECON = {
+  /** P(wrong team buy) = (100 − tatico) / BUY_MISTAKE_DIVISOR. GDD 5.4: 200. */
+  BUY_MISTAKE_DIVISOR: 200, // [v0]
+};
+
 export interface TeamBuyInput {
   side: Side;
   players: { money: number; inv: Inventory }[];
@@ -101,7 +106,7 @@ export function decideTeamBuy(input: TeamBuyInput, rng: Rng): BuyType {
   else if (avg >= FORCE_AVG_MONEY && input.lossStreak >= FORCE_MIN_LOSS_STREAK) decision = 'force';
   else decision = 'eco';
 
-  const mistake = (100 - input.tatico) / 200;
+  const mistake = (100 - input.tatico) / ECON.BUY_MISTAKE_DIVISOR;
   if (rng.chance(mistake)) {
     const others = (['full', 'force', 'eco'] as BuyType[]).filter((d) => d !== decision);
     decision = rng.pick(others);

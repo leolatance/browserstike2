@@ -113,9 +113,10 @@ describe('duel', () => {
     }
   });
 
-  it('trade chance follows 0.3 + 0.4·peek/100', () => {
-    expect(tradeChance(0)).toBeCloseTo(0.3);
-    expect(tradeChance(100)).toBeCloseTo(0.7);
+  it('trade chance follows TRADE_BASE + TRADE_PEEK·peek/100', () => {
+    expect(tradeChance(0)).toBeCloseTo(DUEL.TRADE_BASE);
+    expect(tradeChance(100)).toBeCloseTo(DUEL.TRADE_BASE + DUEL.TRADE_PEEK);
+    expect(tradeChance(50)).toBeGreaterThan(tradeChance(0));
   });
 
   it('is deterministic for a given seed', () => {

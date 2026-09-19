@@ -27,7 +27,7 @@ describe('weapons table', () => {
     expect(weapon('awp').rangeMod).toMatchObject({ long: 18, short: -10 });
     expect(weapon('ak47').rangeMod).toEqual({ short: 0, mid: 0, long: 0 });
     expect(weapon('mp9').rangeMod).toMatchObject({ short: 6, mid: -6 });
-    expect(weapon('glock').rangeMod.long).toBe(-18);
+    expect(weapon('glock').rangeMod.long).toBe(-15); // [v1]
   });
 
   it('gear prices follow GDD 5.4', () => {

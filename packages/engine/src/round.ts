@@ -16,6 +16,7 @@ export const ROUND = {
   TIME: 115, // [v0] 1:55
   BOMB_TIMER: 40, // [v0]
   PLANT_TIME: 3, // [v0]
+  SITE_CLEAR_TIME: 2, // [v0] clearing corners before the plant starts
   PLANT_DROPPED_EXTRA: 3, // [v0] carrier died: someone else has to pick the bomb
   DEFUSE_TIME: 10, // [v0]
   DEFUSE_TIME_KIT: 5, // [v0]
@@ -37,30 +38,32 @@ export const ROUND = {
   CONTACTS_PER_CT: 2, // [v0]
 
   /** CT reaction to a hit: REACTION_BASE + REACTION_TATICO · (1 − tatico/100) */
-  REACTION_BASE: 2, // [v0]
-  REACTION_TATICO: 6, // [v0]
-  LATE_ROTATOR_DELAY: 8, // [v0] one far-site CT stays for info
+  REACTION_BASE: 1, // [v0]
+  REACTION_TATICO: 4, // [v0]
+  LATE_ROTATOR_DELAY: 4, // [v0] one far-site CT stays for info
   /** P(IGL reads the CT setup) = READ_BASE + READ_TATICO · tatico/100 */
-  READ_BASE: 0.25, // [v0]
-  READ_TATICO: 0.5, // [v0]
+  READ_BASE: 0.15, // [v0]
+  READ_TATICO: 0.4, // [v0]
   NO_IGL_BAD_PICK: 0.6, // [v0] without IGL: chance to hit the stacked site
 
   DUEL_GAP_MIN: 2, // [v0]
   DUEL_GAP_MAX: 6, // [v0]
   RETREAT_REJOIN_T: 18, // [v0] seconds until a retreated T re-engages
   RETREAT_REJOIN_CT: 6, // [v0]
+  RETAKE_LATEST: 20, // [v0] CTs stop waiting for teammates this many seconds before the bomb goes off
   /** P(save) when outnumbered = SAVE_BASE + SAVE_TATICO · tatico/100 */
   SAVE_BASE: 0.3, // [v0]
   SAVE_TATICO: 0.4, // [v0]
   WEAPON_PICKUP: 0.7, // [v0]
   FLASH_ASSIST: 0.7, // [v0]
-  FLASH_USE: 0.8, // [v0] chance a side pops a flash for a duel when it has one
+  FLASH_USE: 0.3, // [v0] chance a side pops a flash for a duel when it has one
   SMOKE_DUEL: 0.5, // [v0]
 
-  CT_DEFAULT: 0.5, // [v0]
-  CT_STACK_READ: 0.2, // [v0] toward the site T hit last round (scaled by tatico)
-  CT_STACK_OTHER: 0.1, // [v0]
+  CT_DEFAULT: 0.65, // [v0]
+  CT_STACK_READ: 0.1, // [v0] toward the site T hit last round (scaled by tatico)
+  CT_STACK_OTHER: 0.05, // [v0]
   CT_AGGRESSIVE: 0.2, // [v0]
+  ECO_STACK: 0.8, // [v0] CT on eco stacks one site
 
   RUSH_WHEN_POOR: 0.8, // [v0]
   RUSH_WHEN_RICH: 0.3, // [v0]
@@ -170,6 +173,8 @@ interface Live {
   damagedBy: PlayerId[];
   flashedBy?: Live;
   carrier: boolean;
+  /** Duels fought this round (spreads engagements across the team). */
+  engagements: number;
   // stats
   kills: number;
   assists: number;
@@ -192,6 +197,11 @@ const DEFEND_ORDER: PlayerClass[] = ['rifler', 'entry', 'star', 'support', 'awpe
 
 function orderBy(list: Live[], order: PlayerClass[]): Live[] {
   return list.slice().sort((a, b) => order.indexOf(a.cls) - order.indexOf(b.cls));
+}
+
+/** Next player to take a duel: fewest engagements this round, then class order. */
+function nextUp(list: Live[], order: PlayerClass[]): Live {
+  return list.slice().sort((a, b) => a.engagements - b.engagements || order.indexOf(a.cls) - order.indexOf(b.cls))[0] as Live;
 }
 
 export function simulateRound(params: RoundParams): RoundResult {
@@ -225,6 +235,7 @@ export function simulateRound(params: RoundParams): RoundResult {
       smokes: 0,
       damagedBy: [],
       carrier: false,
+      engagements: 0,
       kills: 0,
       assists: 0,
       flashAssists: 0,
@@ -316,8 +327,8 @@ export function simulateRound(params: RoundParams): RoundResult {
   // ---------------------------------------------------------------- 2. Calls
   const ctIgl = cts.find((l) => l.cls === 'igl');
   const tIgl = ts.find((l) => l.cls === 'igl');
-  const setup = chooseCTSetup(rng, ctIgl, params.prevTCall);
-  const { call, target } = chooseTCall(rng, tIgl, setup, buy.T);
+  const setup = chooseCTSetup(rng, ctIgl, params.prevTCall, buy.CT);
+  const { call, target } = chooseTCall(rng, tIgl, setup, buy.T, buy.CT === 'eco');
   emit({ type: 'call', round, t: 0, side: 'CT', call: setup, ...(ctIgl ? { caller: ctIgl.rp.id } : {}) });
   emit({ type: 'call', round, t: 0, side: 'T', call, ...(tIgl ? { caller: tIgl.rp.id } : {}) });
 
@@ -342,7 +353,7 @@ export function simulateRound(params: RoundParams): RoundResult {
   };
 
   // ------------------------------------------------- 3. CT setup & positions
-  assignCTs(cts, setup, map);
+  assignCTs(cts, setup, buy.CT === 'eco');
   for (const c of cts) {
     const pos = c.forward ? map.sites[c.post as SiteId].forward : c.post === 'mid' ? map.mid.ct : ctHold(c, cts, map);
     c.readyAt = move(c, pos, 0);
@@ -480,6 +491,8 @@ export function simulateRound(params: RoundParams): RoundResult {
 
   /** Resolve one duel (with util and trade) and mutate state. Returns the end time. */
   const fight = (a: Live, d: Live, t: number, o: FightOpts): number => {
+    a.engagements++;
+    d.engagements++;
     markClutch(a);
     markClutch(d);
     const ctx: DuelContext = {
@@ -487,7 +500,8 @@ export function simulateRound(params: RoundParams): RoundResult {
       defenderHoldingAngle: o.defenderHoldingAngle && !d.moved,
       inSmoke: false,
       retakeProT: o.retakeProT,
-      numbersAdvantage: o.presentA.length > o.presentD.length ? 'A' : o.presentD.length > o.presentA.length ? 'D' : null,
+      // "2v1": the side with more players alive in the round (GDD 5.5).
+      numbersAdvantage: alive(a.side).length > alive(d.side).length ? 'A' : alive(d.side).length > alive(a.side).length ? 'D' : null,
     };
     // Utility: each side may pop a flash on the opponent.
     const aThrower = bestThrower(o.presentA);
@@ -685,14 +699,10 @@ export function simulateRound(params: RoundParams): RoundResult {
 
     if (pd.length === 0) {
       alertRotations(t);
+      // Site is clear: Ts plant. CTs still on the way set up for the retake
+      // instead of running in one by one.
       const carrierDead = !ts.some((l) => l.alive && l.carrier);
-      const plantAt = t + ROUND.PLANT_TIME + (carrierDead ? ROUND.PLANT_DROPPED_EXTRA : 0);
-      const incoming = cts.filter((l) => l.alive && !l.saving && l.atSite && l.readyAt > t).map((l) => l.readyAt);
-      const nextDef = incoming.length ? Math.min(...incoming) : Infinity;
-      if (nextDef <= plantAt) {
-        t = nextDef;
-        continue;
-      }
+      const plantAt = t + ROUND.SITE_CLEAR_TIME + ROUND.PLANT_TIME + (carrierDead ? ROUND.PLANT_DROPPED_EXTRA : 0);
       if (plantAt >= ROUND.TIME) {
         finish('CT', 'time', ROUND.TIME);
         break;
@@ -707,8 +717,8 @@ export function simulateRound(params: RoundParams): RoundResult {
     }
 
     alertRotations(t);
-    const a = orderBy(pa, T_ATTACK_ORDER)[0] as Live;
-    const d = orderBy(pd, DEFEND_ORDER)[0] as Live;
+    const a = nextUp(pa, T_ATTACK_ORDER);
+    const d = nextUp(pd, DEFEND_ORDER);
     const tEnd = fight(a, d, t, {
       area: site.plant,
       defenderHoldingAngle: true,
@@ -744,7 +754,11 @@ export function simulateRound(params: RoundParams): RoundResult {
       finish('T', 'bomb', explodeAt);
     }
 
-    const presentCT = (at: number) => cts.filter((l) => l.alive && !l.saving && !l.retreated && l.readyAt <= at);
+    // Retakers regroup: the push starts when everyone has arrived, or when
+    // waiting any longer would leave no time to defuse.
+    const retakers = cts.filter((l) => l.alive && !l.saving);
+    const regroupAt = retakers.length ? Math.min(Math.max(...retakers.map((l) => l.readyAt)), explodeAt - ROUND.RETAKE_LATEST) : plantT;
+    const presentCT = (at: number) => (at < regroupAt ? [] : cts.filter((l) => l.alive && !l.saving && !l.retreated && l.readyAt <= at));
     const presentT = (at: number) => ts.filter((l) => l.alive && !l.retreated && l.readyAt <= at);
 
     t = Math.max(t, plantT + 2);
@@ -777,11 +791,12 @@ export function simulateRound(params: RoundParams): RoundResult {
       const pt = presentT(t);
       if (pc.length === 0) {
         const pending = cts.filter((l) => l.alive && !l.saving && l.readyAt > t).map((l) => l.readyAt);
-        if (pending.length === 0) {
+        const next = Math.max(regroupAt, pending.length ? Math.min(...pending) : 0);
+        if (next <= t) {
           finish('T', 'bomb', explodeAt);
           break;
         }
-        t = Math.max(t + 1, Math.min(...pending));
+        t = Math.max(t + 1, next);
         continue;
       }
       if (pt.length === 0) {
@@ -803,11 +818,12 @@ export function simulateRound(params: RoundParams): RoundResult {
         break;
       }
 
-      const a = orderBy(pc, CT_RETAKE_ORDER)[0] as Live;
-      const d = orderBy(pt, DEFEND_ORDER)[0] as Live;
+      const a = nextUp(pc, CT_RETAKE_ORDER);
+      const d = nextUp(pt, DEFEND_ORDER);
       const tEnd = fight(a, d, t, {
         area: site.plant,
-        defenderHoldingAngle: true,
+        // Post-plant Ts are set up but not on fresh angles: GDD's +5 applies instead.
+        defenderHoldingAngle: false,
         retakeProT: 'D',
         presentA: pc,
         presentD: pt,
@@ -868,8 +884,11 @@ export function simulateRound(params: RoundParams): RoundResult {
   });
 
   // Drop movements scheduled after the round ended (late rotations, saves),
-  // then stable-sort by time; insertion order breaks ties.
-  const indexed = events.filter((e) => !(e.type === 'move' && e.t > endT)).map((e, i) => ({ e, i }));
+  // clamp buzzer-beater kills/trades to the final second, then stable-sort by
+  // time; insertion order breaks ties (roundEnd was emitted last).
+  const indexed = events
+    .filter((e) => !(e.type === 'move' && e.t > endT))
+    .map((e, i) => ({ e: e.t > endT ? { ...e, t: endT } : e, i }));
   indexed.sort((x, y) => x.e.t - y.e.t || x.i - y.i);
 
   const result: RoundResult = {
@@ -898,8 +917,10 @@ function reaction(tatico: number): number {
   return ROUND.REACTION_BASE + ROUND.REACTION_TATICO * (1 - tatico / 100);
 }
 
-function chooseCTSetup(rng: Rng, igl: Live | undefined, prev: TCall | undefined): CTSetup {
+function chooseCTSetup(rng: Rng, igl: Live | undefined, prev: TCall | undefined, buy: BuyType): CTSetup {
   const options: CTSetup[] = ['default', 'stackA', 'stackB', 'aggressive'];
+  // Broke CTs stack a site and pray (real-CS eco behaviour). [v0]
+  if (buy === 'eco' && rng.chance(ROUND.ECO_STACK)) return rng.pick(['stackA', 'stackB'] as CTSetup[]);
   if (!igl) return rng.pick(options);
   const prevSite: SiteId | null = prev ? (prev.endsWith('A') ? 'A' : prev.endsWith('B') ? 'B' : null) : null;
   const tat = igl.attrs.tatico / 100;
@@ -920,19 +941,20 @@ function chooseCTSetup(rng: Rng, igl: Live | undefined, prev: TCall | undefined)
   return 'default';
 }
 
-function defendersBySetup(setup: CTSetup): Record<SiteId, number> {
+function defendersBySetup(setup: CTSetup, eco = false): Record<SiteId, number> {
+  // On an eco the stack is a full 4-man site (mid player still roams). [v0]
   switch (setup) {
     case 'stackA':
-      return { A: 3, B: 1 };
+      return eco ? { A: 4, B: 0 } : { A: 3, B: 1 };
     case 'stackB':
-      return { A: 1, B: 3 };
+      return eco ? { A: 0, B: 4 } : { A: 1, B: 3 };
     default:
       return { A: 2, B: 2 };
   }
 }
 
-function chooseTCall(rng: Rng, igl: Live | undefined, setup: CTSetup, buy: BuyType): { call: TCall; target: SiteId } {
-  const def = defendersBySetup(setup);
+function chooseTCall(rng: Rng, igl: Live | undefined, setup: CTSetup, buy: BuyType, ctEco: boolean): { call: TCall; target: SiteId } {
+  const def = defendersBySetup(setup, ctEco);
   const weaker: SiteId | null = def.A < def.B ? 'A' : def.B < def.A ? 'B' : null;
   let target: SiteId;
   if (igl) {
@@ -953,8 +975,8 @@ function chooseTCall(rng: Rng, igl: Live | undefined, setup: CTSetup, buy: BuyTy
 }
 
 /** Assign CTs to A / B / mid according to the setup. Mutates `post`/`forward`. */
-function assignCTs(cts: Live[], setup: CTSetup, _map: MapDef): void {
-  const counts = defendersBySetup(setup);
+function assignCTs(cts: Live[], setup: CTSetup, eco: boolean): void {
+  const counts = defendersBySetup(setup, eco);
   const slots: (SiteId | 'mid')[] = [];
   for (let i = 0; i < counts.A; i++) slots.push('A');
   slots.push('mid');

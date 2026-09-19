@@ -14,7 +14,7 @@ export const DUEL = {
    * ~64% of duels, which compounds to >95% of matches. Attributes must be a
    * smooth edge, weapons/situation the loud one. Tuned via balance.test.ts.
    */
-  ATTR_SCALE: 1.0, // [v0]
+  ATTR_SCALE: 0.08, // [v0 → v1] 1.0 → 0.08 (see note above; tuned in balance.test.ts)
   /** Logistic divisor: P(A) = 1 / (1 + 10^((scoreD − scoreA) / DIVISOR)). */
   LOGISTIC_DIVISOR: 40, // [v0]
 
@@ -24,12 +24,12 @@ export const DUEL = {
   W_MOV: 0.15, // [v0]
   W_UTIL: 0.15, // [v0]
 
-  HOLD_ANGLE: 6, // [v0] defender holding an angle
+  HOLD_ANGLE: 10, // [v0 → v1] 6 → 10: CT round win was 46%; fresh angles win more in CS
   FLASH_PENALTY: 15, // [v0] −15 · (enemy util / 100) when flashed
   SMOKE_PENALTY: -10, // [v0] both sides when the duel happens in smoke
   RETAKE_PRO_T: 5, // [v0] T defending a planted bomb
   NUMBERS: 8, // [v0] side with the numeric advantage
-  NO_ARMOR: NO_ARMOR_PENALTY, // [v0] −8
+  NO_ARMOR: NO_ARMOR_PENALTY, // [v0 → v1] −8 → −5 (eco win rate was 10%)
   HP_PENALTY_PER_POINT: 0.08, // [v0] −0.08 per missing HP point
 
   HS_BASE: 0.25, // [v0] P(headshot | win) = 0.25 + 0.5 · mira/100
@@ -37,8 +37,13 @@ export const DUEL = {
   RETREAT_BASE: 0.05, // [v0] P(loser survives) = 0.05 + 0.25 · mov/100
   RETREAT_MOV: 0.25, // [v0]
   RETREAT_MIN_HP: 25, // [v0] below this HP the loser cannot escape
-  TRADE_BASE: 0.3, // [v0] P(trade in 3s) = 0.3 + 0.4 · peek/100
-  TRADE_PEEK: 0.4, // [v0]
+  /**
+   * [v0 → v1] GDD: 0.3 + 0.4·peek/100 (≈50% of kills traded at peek 50).
+   * Halved the slope and lowered the base: real-CS trade rate is ~30% and the
+   * peek slope was the 2nd biggest hidden attribute channel in balance tests.
+   */
+  TRADE_BASE: 0.2,
+  TRADE_PEEK: 0.2,
   CLUTCH_MENTAL: 0.2, // [v0] +0.2 · mental for the clutcher
 };
 
