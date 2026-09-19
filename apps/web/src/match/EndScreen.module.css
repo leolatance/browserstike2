@@ -1,0 +1,101 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 10, 13, 0.82);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 10;
+}
+
+.card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--bg-1);
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-2);
+}
+
+.score {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+}
+
+.score strong {
+  font-size: 28px;
+  color: var(--text-0);
+}
+
+.win {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.mvp {
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  font-weight: 700;
+}
+
+.mvpTag {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  margin-right: 6px;
+}
+
+.top {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.top td {
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--line);
+  text-align: right;
+}
+
+.rank {
+  color: var(--text-2);
+  width: 20px;
+  text-align: left !important;
+}
+
+.nick {
+  text-align: left !important;
+  font-weight: 600;
+}
+
+.team {
+  color: var(--text-2);
+  font-weight: 400;
+  font-size: 12px;
+  margin-left: 6px;
+}
+
+.rating {
+  font-weight: 700;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}

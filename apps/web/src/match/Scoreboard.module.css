@@ -1,0 +1,110 @@
+.board {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-1);
+  background: var(--bg-1);
+}
+
+.chev {
+  color: var(--text-2);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  font-size: 13px;
+}
+
+.table th,
+.table td {
+  padding: 5px 8px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.table th {
+  font-size: 11px;
+  color: var(--text-2);
+  font-weight: 600;
+  border-bottom: 1px solid var(--line);
+}
+
+.table tbody tr:nth-child(even) {
+  background: var(--bg-2);
+}
+
+.nick {
+  text-align: left !important;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sideTag {
+  font-size: 10px;
+  color: var(--text-2);
+  margin-left: 4px;
+}
+
+.cls {
+  font-size: 10px;
+  color: var(--text-2);
+  margin-left: 6px;
+  text-transform: uppercase;
+}
+
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+  background: var(--ct);
+}
+
+.dot[data-side='T'] {
+  background: var(--t);
+}
+
+.ct {
+  color: var(--ct);
+}
+
+.t {
+  color: var(--t);
+}
+
+.me td {
+  background: var(--accent-soft) !important;
+  font-weight: 700;
+}
+
+.dead td {
+  color: var(--text-2);
+}
+
+.dead .dot {
+  opacity: 0.35;
+}
+
+.rating {
+  font-weight: 700;
+  color: var(--text-0);
+}

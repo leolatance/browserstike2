@@ -1,0 +1,43 @@
+/* Idle Strike 2 — design tokens. Dark, dense, informative (FACEIT/HLTV-like, original values). */
+:root {
+  --bg-0: #0c0f13;
+  --bg-1: #12161c;
+  --bg-2: #1a2028;
+  --bg-3: #242c36;
+  --line: #2c3541;
+  --line-strong: #3b4654;
+
+  --text-0: #eef2f6;
+  --text-1: #aeb8c3;
+  --text-2: #6f7b88;
+
+  --accent: #ff6a1f;
+  --accent-soft: rgba(255, 106, 31, 0.16);
+
+  --ct: #4c9df7;
+  --ct-soft: rgba(76, 157, 247, 0.18);
+  --t: #f0a13a;
+  --t-soft: rgba(240, 161, 58, 0.18);
+
+  --danger: #ff4a4a;
+  --ok: #38d39f;
+  --warn: #ffd166;
+
+  --radar-bg: #0e1217;
+  --radar-area: #1b222b;
+  --radar-area-site: #23293a;
+  --radar-line: #33404e;
+  --radar-label: #7b8794;
+  --smoke: rgba(200, 205, 210, 0.55);
+  --flash: rgba(255, 255, 240, 0.85);
+  --molotov: rgba(255, 120, 40, 0.55);
+  --he: rgba(255, 220, 90, 0.6);
+
+  --font: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --radius: 6px;
+  --gap: 8px;
+  --gap-lg: 14px;
+  --header-h: 64px;
+}

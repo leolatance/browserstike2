@@ -1,0 +1,12 @@
+.wrap {
+  width: 100%;
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--radar-bg);
+}
+
+.canvas {
+  display: block;
+}
