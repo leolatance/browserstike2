@@ -24,6 +24,12 @@
   padding: 0 4px;
 }
 
+.assist {
+  font-weight: 500;
+  font-size: 12px;
+  opacity: 0.85;
+}
+
 .tag {
   font-size: 10px;
   font-weight: 700;

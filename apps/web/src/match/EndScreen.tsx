@@ -1,14 +1,16 @@
 import type { MatchLog } from '@idle-strike/engine';
 import { displayRating } from '@idle-strike/engine';
+import type { DuelTargetStats } from '../minigames/duelTarget';
 import styles from './EndScreen.module.css';
 
 interface Props {
   log: MatchLog;
+  minigame: DuelTargetStats | null;
   onReplay: () => void;
   onNewMatch: () => void;
 }
 
-export function EndScreen({ log, onReplay, onNewMatch }: Props) {
+export function EndScreen({ log, minigame, onReplay, onNewMatch }: Props) {
   const nick = (id: string) => log.teams.flatMap((t) => t.players).find((p) => p.id === id)?.nick ?? id;
   const top = log.stats.slice().sort((a, b) => b.rating - a.rating).slice(0, 3);
   const mvp = log.stats.filter((s) => s.team === log.winner).sort((a, b) => b.rating - a.rating)[0];
@@ -44,6 +46,21 @@ export function EndScreen({ log, onReplay, onNewMatch }: Props) {
             ))}
           </tbody>
         </table>
+        {minigame && (
+          <div className={styles.mini}>
+            <div className={styles.label}>Minigame · alvo de duelo</div>
+            <div className={styles.miniRow}>
+              <span>
+                média <b className="mono">{minigame.accompanied ? minigame.average : '–'}</b>
+              </span>
+              <span>
+                acompanhados <b className="mono">{minigame.accompanied}/{minigame.total}</b>
+              </span>
+              {minigame.perfect && minigame.total > 0 && <span className={styles.badge}>PERFECT</span>}
+            </div>
+            <div className={styles.hint}>sem recompensa ainda</div>
+          </div>
+        )}
         <div className={styles.actions}>
           <button onClick={onReplay}>Rever</button>
           <button className="primary" onClick={onNewMatch}>

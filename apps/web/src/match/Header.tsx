@@ -15,6 +15,11 @@ export interface HeaderProps {
   econ: Record<Side, { avg: number; buy: BuyType }>;
   /** Shown during the round-end hold. */
   result: string | null;
+  /** "T rush B · CT stack A", shown for the first seconds of action. */
+  callLabel: string | null;
+  /** Active defuse progress 0..1, null when nobody is defusing. */
+  defuse: { progress: number; kit: boolean } | null;
+  minigame: { enabled: boolean; onToggle: () => void };
 }
 
 export function Header(p: HeaderProps) {
@@ -40,8 +45,14 @@ export function Header(p: HeaderProps) {
           )}
           {clock(p.secondsLeft)}
         </div>
+        {p.defuse && (
+          <div className={styles.defuse} role="progressbar" aria-valuenow={Math.round(p.defuse.progress * 100)} aria-label="Defuse">
+            <div className={styles.defuseFill} style={{ width: `${Math.round(p.defuse.progress * 100)}%` }} />
+            <span>{p.defuse.kit ? 'defuse (kit)' : 'defuse'}</span>
+          </div>
+        )}
         <div className={styles.round}>
-          {p.result ? p.result : p.roundLabel}
+          {p.result ? p.result : p.callLabel ? `${p.roundLabel} · ${p.callLabel}` : p.roundLabel}
         </div>
       </div>
       <div className={`${styles.team} ${styles.t}`}>
@@ -52,6 +63,9 @@ export function Header(p: HeaderProps) {
         <span className={`${styles.ct}`}>
           $ {money(p.econ.CT.avg)} <em>{BUY_LABEL[p.econ.CT.buy] ?? p.econ.CT.buy}</em>
         </span>
+        <button className={styles.mini} onClick={p.minigame.onToggle} aria-pressed={p.minigame.enabled}>
+          {p.minigame.enabled ? 'minigame: on' : 'assistir sem minigame'}
+        </button>
         <span className={`${styles.t}`}>
           $ {money(p.econ.T.avg)} <em>{BUY_LABEL[p.econ.T.buy] ?? p.econ.T.buy}</em>
         </span>

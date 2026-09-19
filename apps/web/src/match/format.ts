@@ -14,6 +14,22 @@ export const BUY_LABEL: Record<string, string> = {
   full: 'full buy',
 };
 
+export const T_CALL_LABEL: Record<string, string> = {
+  rushA: 'rush A',
+  rushB: 'rush B',
+  splitA: 'split A',
+  splitB: 'split B',
+  default: 'default',
+  fake: 'fake',
+};
+
+export const CT_SETUP_LABEL: Record<string, string> = {
+  default: 'padrão',
+  stackA: 'stack A',
+  stackB: 'stack B',
+  aggressive: 'agressivo',
+};
+
 export const REASON_LABEL: Record<string, string> = {
   elimination: 'eliminação',
   bomb: 'bomba explodiu',

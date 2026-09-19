@@ -94,6 +94,41 @@
   font-weight: 700;
 }
 
+.mini {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.miniRow {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  font-size: 13px;
+}
+
+.miniRow b {
+  margin-left: 3px;
+}
+
+.badge {
+  color: #111;
+  background: var(--accent);
+  border-radius: 3px;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.hint {
+  font-size: 11px;
+  color: var(--text-2);
+}
+
 .actions {
   display: flex;
   gap: 8px;

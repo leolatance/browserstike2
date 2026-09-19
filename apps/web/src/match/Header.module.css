@@ -100,6 +100,41 @@
   padding-top: 4px;
 }
 
+.mini {
+  min-height: 22px;
+  padding: 0 8px;
+  font-size: 11px;
+  color: var(--text-1);
+}
+
+.defuse {
+  position: relative;
+  width: 120px;
+  height: 14px;
+  margin-top: 3px;
+  border: 1px solid var(--ct);
+  border-radius: 3px;
+  overflow: hidden;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-0);
+}
+
+.defuseFill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--ct-soft);
+  border-right: 2px solid var(--ct);
+}
+
+.defuse span {
+  position: relative;
+}
+
 .econ em {
   font-style: normal;
   color: var(--text-2);
