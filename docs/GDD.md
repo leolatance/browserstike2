@@ -1,6 +1,6 @@
 # Idle Strike 2 — Game Design Document
 
-Versão 0.1 — 19/09/2026. Documento vivo. Números marcados com `[v0]` são valores iniciais de balanceamento e devem ser ajustados via simulação em massa.
+Versão 0.2 — 19/09/2026. Documento vivo. Números marcados com `[v0]` são valores iniciais de balanceamento e devem ser ajustados via simulação em massa. Números marcados com `[v1]` já passaram pelo `test/balance.test.ts` (5.000 partidas por cenário) e são os que estão no código.
 
 ---
 
@@ -148,28 +148,47 @@ Cada duelo gera eventos: `kill {attacker, victim, weapon, headshot, wallbang?, t
 
 ### 5.4 Economia `[v0]` (valores do CS)
 - Início de lado: $800. Pistol round.
-- Vitória: $3250 (+$3500 se plant/defuse variante). Derrota: loss bonus $1400 → $1900 → $2400 → $2900 → $3400. Plant perdida: +$800.
+- Vitória: $3250 por eliminação ou tempo; $3500 por bomba explodida ou defuse. `[v1]` Eliminar os CTs depois do plant paga $3250 (é eliminação), não $3500.
+- Derrota: loss bonus $1400 → $1900 → $2400 → $2900 → $3400. Plant perdida: +$800.
+- `[v1]` Regra do CS2: vencer um round **decrementa** o loss streak em 1 (não zera). O streak zera na troca de lado.
+- `[v1]` T vivo quando o tempo acaba sem plant recebe **$0** de loss bonus (não tentou).
+- `[v1]` Overtime MR3: $10.000 no início de cada half de OT, inventário zerado, lados trocam a cada 3 rounds; o primeiro half de OT mantém os lados do 2º tempo.
 - Kill reward por arma: rifle $300, AWP $100, SMG $600, shotgun $900, faca $1500.
 - Preços: AK $2700, M4 $2900/$3100, AWP $4750, Galil/FAMAS $1800/$2050, MP9/MAC-10 $1250/$1050, Deagle $700, P250 $300, kevlar $650, kevlar+capacete $1000, kit $400, flash $200, smoke $300, molotov $400/$600, HE $300.
-- **Decisão de compra do time** (IGL ou média do Tático): `full buy` se todos podem comprar rifle+armor; `force` se média ≥ $2000 e loss streak ≥ 2; `eco` caso contrário. `Tático` baixo erra essa decisão com probabilidade `(100 − tatico)/200`.
-- Individual: AWPer compra AWP se ≥ $5750; Rifler compra o melhor rifle que cabe deixando $1000 de reserva; Support prioriza util.
+- **Decisão de compra do time** (IGL ou média do Tático): `full buy` se todos podem comprar rifle+armor (piso: rifle mais barato + kevlar; rifle salvo conta); `force` se média ≥ $2000 e loss streak ≥ 2; `eco` caso contrário. `Tático` baixo erra essa decisão com probabilidade `(100 − tatico)/200`. `[v1]` O erro cai na opção **vizinha** (`full ↔ force ↔ eco`): ninguém com $4000 cada "erra" pra eco.
+- Individual: AWPer compra AWP se ≥ $5750 (só um por time); Rifler compra o melhor rifle que cabe deixando $1000 de reserva (se nem o mais barato cabe com reserva, compra o que cabe); Support prioriza util.
+- `[v1]` Em `eco`: save total abaixo de $1500 (perdedor de pistol); P250 com 60% a partir de $1500; Deagle com 50% a partir de $2400. Rifle salvo nunca é trocado.
+- `[v1]` CT em `eco` stacka **4 num site** em 80% dos rounds (o 5º fica no meio). Stack de eco não é legível pelo IGL T antes do contato: o T escolhe o site no cara-ou-coroa.
+- `[v1]` Sobrevivente mantém arma, armor e kit; utilitária não usada é descartada no fim do round. Quem mata pode pegar a arma da vítima se for melhor (70%).
 
-Armas afetam duelo: `AWP` +18 mira em longa / −10 em curta; `rifle` 0; `SMG` −6 (+6 em curta); `pistola` −18; sem armor −8 na sobrevivência.
+Armas afetam duelo: `AWP` +18 em longa / +4 em média / −10 em curta; `rifle` 0 (Galil/FAMAS −2/−2/−3); `SMG` +6 em curta / −6 em média e longa; `pistola` **−15** `[v1: era −18]` (P250 −12/−13/−15, Deagle −10/−9/−9 por curta/média/longa); sem armor **−5** no score do duelo `[v1: era −8]`. Motivo: com −18/−8 o eco vencia ~10% (meta 12–20%).
 
 ### 5.5 Resolução de duelo `[v0]`
 Para atacante **A** (quem inicia) e defensor **D**:
 
 ```
-scoreA = 0.45·mira + 0.25·peek + 0.15·mov + 0.15·util_bonus + arma + situação
-scoreD = 0.45·mira + 0.25·tatico(posição) + 0.15·mov + 0.15·util_bonus + arma + situação
+scoreA = k·(0.45·mira + 0.25·peek + 0.15·mov + 0.15·util) + arma + situação
+scoreD = k·(0.45·mira + 0.25·tatico(posição) + 0.15·mov + 0.15·util) + arma + situação
+k = 0.14   [v1: era 1.0 implícito]
 
-situação: defensor segurando ângulo +6; atacante flashado −15·(util_inimiga/100); duelo em smoke −10 ambos; retake pró-T +5; 2v1 numérico +8 pro lado com vantagem
+situação: defensor segurando ângulo +10 [v1: era +6]; atacante flashado −15·(util_inimiga/100);
+          duelo em smoke −10 ambos; retake pró-T +5; 2v1 numérico +8 pro lado com vantagem;
+          sem armor −5; HP faltando −0.08 por ponto
 
 P(A vence) = 1 / (1 + 10^((scoreD − scoreA) / 40))
 P(headshot | vitória) = 0.25 + 0.5·(mira_vencedor/100)
 P(perdedor sobrevive recuando) = 0.05 + 0.25·(mov_perdedor/100)   → gera 'damage' em vez de 'kill'
-P(trade em 3s) = 0.3 + 0.4·(peek do próximo aliado/100)
+P(trade em 3s) = 0.2 + 0.2·(peek do próximo aliado/100)   [v1: era 0.3 + 0.4·peek]
+P(perdedor acerta dano parcial) = 0.20, 10–60 de dano   [v1: alimenta assist e ADR]
 ```
+
+`[v1]` **Por que k = 0.14.** Com a fórmula literal (k = 1) um time +10 em tudo vencia 99% das partidas: o duelo compõe ~150 vezes por partida e a economia amplifica. Os atributos ainda entram fora da fórmula (flash por Util, trade por Peek, decisões por Tático, recuo por Mov, Mental) e só esses canais já dão ~60% pro time +10; k = 0.14 leva à faixa 70–76%. Consequência no duelo isolado, tudo o mais igual: **Mira 100 vs Mira 0 = 59%** de vitória; **todos os atributos 100 vs 0 = 69%**. A vantagem de atributo é suave por duelo e decisiva por partida, como no CS real.
+
+`[v1]` **Interpretações de regra fixadas no código:**
+- "2v1 numérico" usa a contagem de **vivos do time no round** (5v4, 3v1…), não quem está presente no confronto local. Senão todo hit 5v2 nascia com +8 pro T.
+- No pós-plant o T defende **sem** o bônus de ângulo: recebe só o +5 de retake. Os CTs se reagrupam antes do retake (esperam todos chegarem ou até 20s antes da bomba).
+- Trade: a P(trade) do GDD antigo (~50% a Peek 50) dobrava kills; CS real gira em ~30%. A inclinação por Peek também era o 2º maior canal escondido de vantagem de atributo.
+- Duelos são distribuídos por round-robin dentro do time (quem lutou menos no round peeka primeiro, desempate por classe). Sem isso o Entry encadeava 4 kills ou morria e a distribuição de multi-kills ficava irreal.
 
 Distâncias do mapa: cada rota/área tem `range: 'short'|'mid'|'long'` que aplica o modificador de arma.
 
@@ -182,14 +201,16 @@ Distâncias do mapa: cada rota/área tem `range: 'short'|'mid'|'long'` que aplic
 Mesma estrutura de `Player`. Atributos gerados por nível alvo, classes distribuídas. Nomes de paródia gerados (lista em `data/botnames.ts`).
 
 ### 5.8 Testes de balance (obrigatórios)
-Rodar 5.000 partidas por cenário:
+Rodar 5.000 partidas por cenário (`packages/engine/test/balance.test.ts`; relatório rápido com `npm run balance:report -- 1000`):
 - Times iguais → 50% ± 3.
-- Time +10 em todos os atributos → 62–68%.
+- Time +10 em todos os atributos → **70–76%** `[v1: era 62–68%]`.
 - Pistol round: vencedor do pistol vence o round 2 em ≥ 75%.
-- Eco vs full buy → 12–20%.
-- Rating médio de todos os jogadores ≈ 1.00 ± 0.03; desvio padrão 0.15–0.25.
+- Eco vs full buy → 12–20%. `[v1]` Cenário: time em `eco` com $2.400 cada vs time em `full` com $10.000, round isolado, lados alternados.
+- Rating médio de todos os jogadores ≈ 1.00 ± 0.03; desvio padrão **0.25–0.35** `[v1: era 0.15–0.25]`. Com os coeficientes públicos do HLTV 2.0 a dispersão natural por partida é ~0.31 (a distribuição de multi-kills bate com o CS real: 2k 10%, 3k 2,6%, 4k 0,6%); a faixa antiga exigiria comprimir a escala.
 - Distribuição de placares: 13–0 a 13–2 < 6% em times iguais.
 - Duração média 22–26 rounds.
+
+Resultado v1 (19/09/2026): iguais 49,5% · +10 73,6% · pistol 77,6% · eco 17,6% · rating 1,000 / 0,312 · blowouts 2,5% · 22,38 rounds. Diagnóstico fora dos gates: CT vence ~50% dos rounds, plant em ~48%, fins por eliminação 57% / bomba 24% / tempo 13% / defuse 5%.
 
 ---
 
@@ -255,11 +276,12 @@ Um 1.60 na derrota rende mais que um 0.80 na vitória — por design.
 - Minigame: perfect (top 10% do próprio histórico) → baú extra pequeno.
 
 ### 8.2 Rating individual (estilo HLTV 2.0)
-Aproximação pública, ponto de partida `[v0]`:
+Aproximação pública, mantida em `[v1]` (KAST em porcentagem 0–100):
 ```
 Impact = 2.13·KPR + 0.42·APR − 0.41
 Rating = 0.0073·KAST + 0.3591·KPR − 0.5329·DPR + 0.2372·Impact + 0.0032·ADR + 0.1587
 ```
+`[v1]` Testou-se comprimir os termos por round (×0.75) pra caber a std em 0.15–0.25; revertido — a faixa é que estava errada (ver 5.8). Um 30-bomb continua valendo ~1.5.
 Ajuste por role `[v0]`: Âncora +0.05 por round sobrevivido em defesa; Support conta flash assist como 0.5 kill no Impact; IGL soma +0.03 por round vencido em call correta.
 
 Rating de carreira = média ponderada (últimas 50 partidas peso 2, resto peso 1). Forma = média das últimas 10.
