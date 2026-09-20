@@ -587,6 +587,8 @@ var DUEL = {
    */
   ATTR_SCALE: 0.14,
   // [v0 → v1] 1.0 → 0.14 (see note above; the +10 gate is 70–76%)
+  /** x1 is a pure duel with no team to hide behind: attributes weigh more per duel. [v1] tuned in balance.test.ts */
+  ATTR_SCALE_X1: 0.4,
   /** Logistic divisor: P(A) = 1 / (1 + 10^((scoreD − scoreA) / DIVISOR)). */
   LOGISTIC_DIVISOR: 40,
   // [v0]
@@ -673,7 +675,7 @@ function attrPart(d, role, ctx, triggered) {
   const positional = role === "A" ? DUEL.W_PEEK * a.peek : DUEL.W_TATICO * (d.clutch ? a.mental : a.tatico);
   let score = DUEL.W_MIRA * a.mira + positional + DUEL.W_MOV * a.mov + DUEL.W_UTIL * a.util;
   if (d.clutch) score += DUEL.CLUTCH_MENTAL * a.mental;
-  return DUEL.ATTR_SCALE * score + rawScore;
+  return (ctx.attrScale ?? DUEL.ATTR_SCALE) * score + rawScore;
 }
 function commonPart(d, ctx) {
   let s = d.weapon.rangeMod[ctx.range];
@@ -2739,6 +2741,133 @@ function rankOf(mmr) {
   return out;
 }
 
+// packages/engine/src/x1.ts
+var X1 = {
+  ROUNDS: 10,
+  // first to 10
+  RESPAWN_SECONDS: 3,
+  /** Seconds between the respawn and the next contact. */
+  SETUP_SECONDS: 2
+};
+function simulateX1(config, seed, rounds = X1.ROUNDS) {
+  const rng = new Rng(seed);
+  const map = config.map;
+  const arena = map.mid.contact;
+  const range = areaRange(map, arena);
+  const events = [];
+  const emit2 = (e) => events.push(e);
+  const mk = (p, id) => ({ id, p, attrs: effectiveAttrs(p, { mental: p.attrs.mental }), build: resolveBuild(p.build), hp: 100, kills: 0, deaths: 0, damage: 0, headshots: 0, engagements: 0 });
+  const A = mk(config.a, "a1");
+  const B = mk(config.b, "b1");
+  const wpn = (side) => side === 0 ? "m4" : "ak47";
+  const money = { a1: 0, b1: 0 };
+  emit2({ type: "roundStart", round: 1, t: 0, score: [0, 0], sides: { CT: 0, T: 1 }, money, buy: { CT: "full", T: "full" }, pistol: false, freezetimeEnd: 0 });
+  for (const l of [A, B]) emit2({ type: "buy", round: 1, t: 0, player: l.id, weapon: wpn(l === A ? 0 : 1), armor: true, helmet: true, kit: false, utils: [], spent: 0 });
+  emit2({ type: "respawn", round: 1, t: 0, player: A.id, area: arena });
+  emit2({ type: "respawn", round: 1, t: 0, player: B.id, area: arena });
+  const pattern = rng.shuffle(["timing", "premira", "alvo"]);
+  const situations = [];
+  let t = X1.SETUP_SECONDS;
+  let duelN = 0;
+  let lastKill = 0;
+  while (A.kills < rounds && B.kills < rounds) {
+    const owner = duelN % 2 === 0 ? A : B;
+    const other = owner === A ? B : A;
+    const sit = pattern[Math.floor(duelN / 2) % 3];
+    const attacker = sit === "timing" ? owner : other;
+    const defender = attacker === A ? B : A;
+    const holding = sit === "premira";
+    situations.push(A === attacker ? "timing" : holding ? "premira" : "alvo");
+    let killed = false;
+    let guard = 0;
+    while (!killed && guard++ < 10) {
+      const id = `r1d${++duelN}`;
+      const ctx = {
+        range,
+        defenderHoldingAngle: holding,
+        inSmoke: false,
+        retakeProT: null,
+        numbersAdvantage: null,
+        attackerFlags: { firstDuel: attacker.engagements === 0, pistol: false },
+        defenderFlags: { firstDuel: defender.engagements === 0, atSite: holding, pistol: false },
+        attrScale: DUEL.ATTR_SCALE_X1
+      };
+      emit2({
+        type: "duel",
+        round: 1,
+        t: Math.round(Math.max(0, t - 0.8) * 10) / 10,
+        id,
+        attacker: attacker.id,
+        defender: defender.id,
+        area: arena,
+        range,
+        situation: { holdingAngle: holding, attackerFlashed: false, defenderFlashed: false, inSmoke: false, retakeProT: null, numbers: null, clutch: null }
+      });
+      attacker.engagements++;
+      defender.engagements++;
+      const du = (l, side) => ({ attrs: l.attrs, weapon: weapon(wpn(side)), armor: true, hp: l.hp, clutch: false, conditionals: l.build.conditionals });
+      const res = resolveDuel(du(attacker, attacker === A ? 0 : 1), du(defender, defender === A ? 0 : 1), ctx, rng);
+      const winner2 = res.winner === "A" ? attacker : defender;
+      const loser = winner2 === attacker ? defender : attacker;
+      const w = wpn(winner2 === A ? 0 : 1);
+      if (res.loserSurvived) {
+        emit2({ type: "damage", round: 1, t, attacker: winner2.id, victim: loser.id, amount: res.damage, weapon: w, area: arena, duel: id });
+        winner2.damage += res.damage;
+        loser.hp -= res.damage;
+        t += 2;
+        continue;
+      }
+      emit2({ type: "damage", round: 1, t, attacker: winner2.id, victim: loser.id, amount: loser.hp, weapon: w, area: arena, duel: id });
+      emit2({ type: "kill", round: 1, t, attacker: winner2.id, victim: loser.id, weapon: w, headshot: res.headshot, area: arena, duel: id });
+      winner2.damage += loser.hp;
+      winner2.kills++;
+      if (res.headshot) winner2.headshots++;
+      loser.deaths++;
+      loser.hp = 0;
+      lastKill = t;
+      killed = true;
+      const next = t + X1.RESPAWN_SECONDS;
+      emit2({ type: "respawn", round: 1, t: next, player: loser.id, area: arena });
+      A.hp = 100;
+      B.hp = 100;
+      t = next + X1.SETUP_SECONDS;
+    }
+  }
+  const score = [A.kills, B.kills];
+  const winner = A.kills >= rounds ? 0 : 1;
+  emit2({ type: "roundEnd", round: 1, t: lastKill, winner: winner === 0 ? "CT" : "T", winnerTeam: winner, reason: "elimination", score, survivors: [winner === 0 ? "a1" : "b1"] });
+  const indexed = events.map((e, i) => ({ e, i }));
+  indexed.sort((x, y) => x.e.t - y.e.t || x.i - y.i);
+  const stats = [A, B].map((l, i) => {
+    const b = ratingBreakdown({ kills: l.kills, deaths: l.deaths, assists: 0, damage: l.damage, kastRounds: 1, rounds: 1 });
+    return { id: l.id, team: i, kills: l.kills, deaths: l.deaths, assists: 0, flashAssists: 0, headshots: l.headshots, damage: l.damage, kastRounds: 1, rounds: 1, entryKills: 0, entryDeaths: 0, multiKills: { 2: 0, 3: 0, 4: 0, 5: 0 }, clutchesWon: 0, clutchAttempts: 0, plants: 0, defuses: 0, rating: b.rating, adr: b.adr, kast: b.kast, cardTriggers: {} };
+  });
+  const teams = [
+    { id: "a", name: config.a.nick, players: [{ ...config.a, id: "a1" }] },
+    { id: "b", name: config.b.nick, players: [{ ...config.b, id: "b1" }] }
+  ];
+  const log = {
+    version: 1,
+    seed,
+    mapId: map.id,
+    teams: [
+      { id: "a", name: teams[0].name, players: teams[0].players.map((p) => ({ id: p.id, nick: p.nick, class: p.class })) },
+      { id: "b", name: teams[1].name, players: teams[1].players.map((p) => ({ id: p.id, nick: p.nick, class: p.class })) }
+    ],
+    startingSides: { CT: 0, T: 1 },
+    mr: 1,
+    otMr: 0,
+    drill: "x1",
+    events: indexed.map((x) => x.e),
+    rounds: [{ round: 1, winner: winner === 0 ? "CT" : "T", winnerTeam: winner, reason: "elimination", score, buy: { CT: "full", T: "full" }, sides: { CT: 0, T: 1 }, duration: lastKill, planted: false }],
+    score,
+    winner,
+    overtime: false,
+    stats
+  };
+  return { log, score, winner, situations };
+}
+
 // packages/engine/src/progression.ts
 var XP = {
   BASE: 60,
@@ -2779,10 +2908,10 @@ function minigameMult(average) {
 }
 function matchXp(input) {
   const result = input.won ? XP.WIN : XP.LOSS;
-  const performance = performanceMult(input.rating);
+  const desempenho = performanceMult(input.rating);
   const minigame = minigameMult(input.minigameAvg);
   const mode = input.mode === "online" ? XP.MODE_ONLINE : XP.MODE_SOLO;
-  return { xp: Math.round(XP.BASE * result * performance * minigame * mode), base: XP.BASE, result, performance, minigame, mode };
+  return { xp: Math.round(XP.BASE * result * desempenho * minigame * mode), base: XP.BASE, result, desempenho, minigame, mode };
 }
 function applyXp(state, gain) {
   let { level, xp } = state;
@@ -2845,6 +2974,7 @@ export {
   WEAPONS,
   WIN_REWARD,
   WIN_REWARD_OBJECTIVE,
+  X1,
   XP,
   addMoney,
   applyXp,
@@ -2901,6 +3031,7 @@ export {
   simulateMatch,
   simulateRound,
   simulateScenario,
+  simulateX1,
   slotsForLevel,
   smgFor,
   softReset,

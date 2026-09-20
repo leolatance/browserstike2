@@ -16,6 +16,8 @@ export const DUEL = {
    * smooth edge, weapons/situation the loud one. Tuned via balance.test.ts.
    */
   ATTR_SCALE: 0.14, // [v0 → v1] 1.0 → 0.14 (see note above; the +10 gate is 70–76%)
+  /** x1 is a pure duel with no team to hide behind: attributes weigh more per duel. [v1] tuned in balance.test.ts */
+  ATTR_SCALE_X1: 0.4,
   /** Logistic divisor: P(A) = 1 / (1 + 10^((scoreD − scoreA) / DIVISOR)). */
   LOGISTIC_DIVISOR: 40, // [v0]
 
@@ -88,6 +90,8 @@ export interface DuelContext {
   defenderFlags?: DuelFlags;
   /** Extra retreat chance for both (deathmatch: players disengage more). */
   retreatBonus?: number;
+  /** Overrides DUEL.ATTR_SCALE (x1). */
+  attrScale?: number;
 }
 
 export interface DuelResult {
@@ -143,7 +147,7 @@ function attrPart(d: Duelist, role: 'A' | 'D', ctx: DuelContext, triggered: stri
   const positional = role === 'A' ? DUEL.W_PEEK * a.peek : DUEL.W_TATICO * (d.clutch ? a.mental : a.tatico);
   let score = DUEL.W_MIRA * a.mira + positional + DUEL.W_MOV * a.mov + DUEL.W_UTIL * a.util;
   if (d.clutch) score += DUEL.CLUTCH_MENTAL * a.mental;
-  return DUEL.ATTR_SCALE * score + rawScore;
+  return (ctx.attrScale ?? DUEL.ATTR_SCALE) * score + rawScore;
 }
 
 function commonPart(d: Duelist, ctx: DuelContext): number {
