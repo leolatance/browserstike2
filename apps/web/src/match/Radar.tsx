@@ -156,7 +156,7 @@ export function Radar({ player, map, highlight }: Props) {
         const x = P(p.x);
         const y = P(p.y);
         if (!p.alive) {
-          if (roundOver) continue;
+          if (roundOver || (player.log.drill && p.diedAt !== null && st.t - p.diedAt > 3)) continue;
           ctx.strokeStyle = color;
           ctx.globalAlpha = 0.9;
           ctx.lineWidth = 2.5;

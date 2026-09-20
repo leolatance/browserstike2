@@ -85,11 +85,11 @@ export class DuelTargetGame {
   }
 
   /** A duel involving the player just started. Any pending target counts as missed. */
-  spawn(id: string, nowMs: number, label: string | null = null): Target {
+  spawn(id: string, nowMs: number, label: string | null = null, at?: { x: number; y: number }): Target {
     if (this.current) this.miss();
     const rng = new Rng(hashSeed(id));
     const m = DUEL_TARGET.MARGIN;
-    this.current = { id, label, x: m + rng.next() * (1 - 2 * m), y: m + rng.next() * (1 - 2 * m), spawnedAt: nowMs };
+    this.current = { id, label, x: at?.x ?? m + rng.next() * (1 - 2 * m), y: at?.y ?? m + rng.next() * (1 - 2 * m), spawnedAt: nowMs };
     return this.current;
   }
 

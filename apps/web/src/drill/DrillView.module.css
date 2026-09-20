@@ -1,0 +1,146 @@
+.view {
+  display: grid;
+  gap: var(--gap);
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.head {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 10px;
+  align-items: center;
+  padding: 8px 10px;
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.title {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.sub {
+  color: var(--text-2);
+  font-size: 11px;
+}
+
+.timer {
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.focus {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12px;
+}
+
+.gain {
+  font-style: normal;
+  color: var(--ok);
+  margin-left: 6px;
+  font-weight: 700;
+}
+
+.track {
+  position: relative;
+  height: 8px;
+  background: var(--bg-3);
+  border-radius: 4px;
+}
+
+.fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+
+.cap {
+  position: absolute;
+  top: -3px;
+  width: 2px;
+  height: 14px;
+  background: var(--text-1);
+  opacity: 0.7;
+}
+
+.radarWrap {
+  position: relative;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background: rgba(12, 15, 19, 0.75);
+}
+
+.paused {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 11px;
+  color: var(--text-2);
+  text-transform: uppercase;
+}
+
+.controls {
+  display: flex;
+  gap: 6px;
+}
+
+.cols {
+  display: grid;
+  gap: var(--gap);
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 900px) {
+  .cols {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.h2 {
+  margin: 0 0 6px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-1);
+}
+
+.board {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.board td {
+  padding: 4px 8px;
+  text-align: right;
+}
+
+.board td:first-child {
+  text-align: left;
+  width: 100%;
+}
+
+.d {
+  color: var(--text-2);
+}
+
+.me td {
+  background: var(--accent-soft);
+  font-weight: 700;
+}

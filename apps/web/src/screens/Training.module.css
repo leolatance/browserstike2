@@ -1,0 +1,37 @@
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  padding: 4px 6px;
+  border-left: 3px solid var(--line);
+  background: var(--bg-2);
+}
+
+.list li span {
+  color: var(--text-1);
+  text-align: right;
+}
+
+.won {
+  border-left-color: var(--ok) !important;
+}
+
+.lost {
+  border-left-color: var(--danger) !important;
+}
+
+.center {
+  display: flex;
+  justify-content: center;
+  padding: 12px 0;
+}

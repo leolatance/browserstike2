@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { MatchLog } from '@idle-strike/engine';
-import { ReplayPlayer, type ReplayState } from './replay';
+import { ReplayPlayer, type ReplayOptions, type ReplayState } from './replay';
 
 /** React state is refreshed at most every `throttleMs` (the radar draws on its own). */
 const THROTTLE_MS = 100;
 
-export function useReplay(log: MatchLog): { player: ReplayPlayer; state: ReplayState } {
-  const player = useMemo(() => new ReplayPlayer(log), [log]);
+export function useReplay(log: MatchLog, opts?: ReplayOptions): { player: ReplayPlayer; state: ReplayState } {
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const player = useMemo(() => new ReplayPlayer(log, opts), [log]);
   const [state, setState] = useState<ReplayState>(() => player.getState());
   const lastPush = useRef(0);
 

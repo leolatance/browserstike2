@@ -20,7 +20,7 @@ export const TRAINING = {
     [6, 0.4, 'médio'],
     [Infinity, 0.1, 'baixo'],
   ] as [number, number, YieldLabel][],
-  TREINO_SECONDS: 180, // [v0] GDD 4.1 (~3 min)
+  TREINO_SECONDS: 120, // [v1] GDD 4.1: ~2 min of chained scenarios
   DM_SECONDS: 240, // [v0] GDD 4.2 (~4 min)
   /** Target cadence (ms) and visibility per mode. [v0] */
   TREINO_SPAWN_MS: [1500, 3000] as [number, number],

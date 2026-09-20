@@ -50,8 +50,17 @@ export function indexRounds(log: MatchLog): RoundIndex[] {
 
 type Listener = (state: ReplayState) => void;
 
+export interface ReplayOptions {
+  /** Game seconds per wall-clock second (drills run in real time: 1). */
+  rate?: number;
+  /** Game seconds kept on screen after roundEnd. */
+  hold?: number;
+}
+
 export class ReplayPlayer {
   readonly rounds: RoundIndex[];
+  readonly rate: number;
+  readonly hold: number;
   private state: ReplayState = { roundIdx: 0, t: 0, playing: false, speed: 1, finished: false };
   private listeners = new Set<Listener>();
   private rafId: number | null = null;
@@ -59,8 +68,13 @@ export class ReplayPlayer {
   private pausedByVisibility = false;
   private attached = false;
 
-  constructor(readonly log: MatchLog) {
+  constructor(
+    readonly log: MatchLog,
+    opts: ReplayOptions = {},
+  ) {
     this.rounds = indexRounds(log);
+    this.rate = opts.rate ?? GAME_SECONDS_PER_REAL_SECOND;
+    this.hold = opts.hold ?? ROUND_END_HOLD;
   }
 
   get current(): RoundIndex {
@@ -125,7 +139,7 @@ export class ReplayPlayer {
   skipToEnd(): void {
     this.pause();
     const last = this.rounds.length - 1;
-    this.set({ roundIdx: last, t: (this.rounds[last] as RoundIndex).end.t + ROUND_END_HOLD, finished: true, playing: false });
+    this.set({ roundIdx: last, t: (this.rounds[last] as RoundIndex).end.t + this.hold, finished: true, playing: false });
   }
 
   restart(): void {
@@ -144,12 +158,12 @@ export class ReplayPlayer {
     const dt = this.lastTs === null ? 0 : Math.min(MAX_FRAME_DT, (ts - this.lastTs) / 1000);
     this.lastTs = ts;
     let { roundIdx, t } = this.state;
-    t += dt * GAME_SECONDS_PER_REAL_SECOND * this.state.speed;
+    t += dt * this.rate * this.state.speed;
     const round = this.rounds[roundIdx] as RoundIndex;
-    if (t >= round.end.t + ROUND_END_HOLD) {
+    if (t >= round.end.t + this.hold) {
       if (roundIdx >= this.rounds.length - 1) {
         this.rafId = null;
-        this.set({ t: round.end.t + ROUND_END_HOLD, playing: false, finished: true });
+        this.set({ t: round.end.t + this.hold, playing: false, finished: true });
         return;
       }
       roundIdx += 1;

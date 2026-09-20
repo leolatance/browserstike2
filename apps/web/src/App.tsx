@@ -9,6 +9,7 @@ import { Profile } from './screens/Profile';
 import { Queue } from './screens/Queue';
 import { Result } from './screens/Result';
 import { Training } from './screens/Training';
+import { Deathmatch } from './screens/Deathmatch';
 import { Inventory } from './screens/Inventory';
 import { BuildScreen } from './screens/BuildScreen';
 
@@ -48,7 +49,7 @@ export function App() {
           path="/treino"
           element={
             <RequireCharacter>
-              <Training mode="treino" />
+              <Training />
             </RequireCharacter>
           }
         />
@@ -56,7 +57,7 @@ export function App() {
           path="/dm"
           element={
             <RequireCharacter>
-              <Training mode="dm" />
+              <Deathmatch />
             </RequireCharacter>
           }
         />

@@ -1,0 +1,44 @@
+.prompt {
+  width: 100%;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: var(--bg-1);
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+}
+
+.head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+}
+
+.hint {
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+.call {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-height: 48px;
+  text-align: left;
+}
+
+.call span {
+  color: var(--text-2);
+  font-size: 11px;
+}
+
+.lineup {
+  display: block;
+  margin: 0 auto;
+  border-radius: var(--radius);
+  touch-action: none;
+}

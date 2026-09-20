@@ -129,11 +129,19 @@ export function snapshot(log: MatchLog, map: MapDef, ri: RoundIndex, t: number):
           diedAt = e.t;
           pos = centroid(map, e.area);
           heading = null;
+        } else if (isEvent(e, 'respawn') && e.player === p.id) {
+          alive = true;
+          diedAt = null;
+          hp = 100;
+          hitAt = null;
+          pos = centroid(map, e.area);
+          heading = null;
         }
       }
       const idx = perTeamIndex[teamIdx] as number;
       perTeamIndex[teamIdx] = idx + 1;
-      const off = spread(idx, alive ? 40 : 22);
+      // Sides get different angles so a CT and a T in the same area never overlap.
+      const off = spread(idx + (side === 'T' ? 2.5 : 0), alive ? 40 : 22);
       players.push({
         id: p.id,
         nick: nickOf.get(p.id) ?? p.id,
