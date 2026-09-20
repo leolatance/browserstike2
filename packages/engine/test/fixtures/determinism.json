@@ -1,0 +1,182 @@
+{
+  "seed": 2026,
+  "config": {
+    "mapId": "baixada",
+    "teams": [
+      {
+        "id": "a",
+        "name": "Muriqui Gaming",
+        "players": [
+          {
+            "id": "a1",
+            "nick": "tunelz",
+            "attrs": {
+              "mira": 43,
+              "mov": 58,
+              "peek": 54,
+              "tatico": 45,
+              "util": 58,
+              "mental": 55
+            },
+            "class": "igl",
+            "build": {
+              "cards": []
+            }
+          },
+          {
+            "id": "a2",
+            "nick": "n1troh",
+            "attrs": {
+              "mira": 60,
+              "mov": 48,
+              "peek": 49,
+              "tatico": 51,
+              "util": 39,
+              "mental": 57
+            },
+            "class": "awper",
+            "build": {
+              "cards": []
+            }
+          },
+          {
+            "id": "a3",
+            "nick": "kitless",
+            "attrs": {
+              "mira": 59,
+              "mov": 58,
+              "peek": 58,
+              "tatico": 39,
+              "util": 55,
+              "mental": 57
+            },
+            "class": "entry",
+            "build": {
+              "cards": []
+            }
+          },
+          {
+            "id": "a4",
+            "nick": "cabr4l",
+            "attrs": {
+              "mira": 53,
+              "mov": 52,
+              "peek": 42,
+              "tatico": 46,
+              "util": 53,
+              "mental": 54
+            },
+            "class": "rifler",
+            "build": {
+              "cards": []
+            }
+          },
+          {
+            "id": "a5",
+            "nick": "lurkzin",
+            "attrs": {
+              "mira": 51,
+              "mov": 42,
+              "peek": 40,
+              "tatico": 53,
+              "util": 58,
+              "mental": 59
+            },
+            "class": "anchor",
+            "build": {
+              "cards": []
+            }
+          }
+        ]
+      },
+      {
+        "id": "b",
+        "name": "Tamanduá Tactics",
+        "players": [
+          {
+            "id": "b1",
+            "nick": "p1stoleiro",
+            "attrs": {
+              "mira": 42,
+              "mov": 47,
+              "peek": 51,
+              "tatico": 59,
+              "util": 45,
+              "mental": 55
+            },
+            "class": "igl",
+            "build": {
+              "cards": []
+            }
+          },
+          {
+            "id": "b2",
+            "nick": "jotaPê",
+            "attrs": {
+              "mira": 60,
+              "mov": 45,
+              "peek": 48,
+              "tatico": 44,
+              "util": 49,
+              "mental": 52
+            },
+            "class": "awper",
+            "build": {
+              "cards": []
+            }
+          },
+          {
+            "id": "b3",
+            "nick": "murph",
+            "attrs": {
+              "mira": 48,
+              "mov": 45,
+              "peek": 50,
+              "tatico": 41,
+              "util": 54,
+              "mental": 48
+            },
+            "class": "entry",
+            "build": {
+              "cards": []
+            }
+          },
+          {
+            "id": "b4",
+            "nick": "catw4lk",
+            "attrs": {
+              "mira": 45,
+              "mov": 51,
+              "peek": 48,
+              "tatico": 57,
+              "util": 53,
+              "mental": 49
+            },
+            "class": "rifler",
+            "build": {
+              "cards": []
+            }
+          },
+          {
+            "id": "b5",
+            "nick": "wallb4ng",
+            "attrs": {
+              "mira": 54,
+              "mov": 45,
+              "peek": 43,
+              "tatico": 53,
+              "util": 45,
+              "mental": 45
+            },
+            "class": "anchor",
+            "build": {
+              "cards": []
+            }
+          }
+        ]
+      }
+    ],
+    "startingCT": 1
+  },
+  "hash": "f46bbfd0"
+}
