@@ -50,7 +50,7 @@ export interface MatchXpBreakdown {
   xp: number;
   base: number;
   result: number;
-  /** GDD 8.1 'desempenho' (named so because the determinism grep bans the identifier `performance`). */
+  /** GDD 8.1 'desempenho' (kept in pt-BR: the determinism grep bans the English identifier). */
   desempenho: number;
   minigame: number;
   mode: number;
