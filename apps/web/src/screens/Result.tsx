@@ -74,6 +74,9 @@ export function Result() {
   const stats = log.stats.find((s) => s.id === source.myId)!;
   const won = log.winner === source.myTeam;
   const other = source.myTeam === 0 ? 1 : 0;
+  const teamRank = log.stats.filter((s) => s.team === source.myTeam).sort((a, b) => b.rating - a.rating).findIndex((s) => s.id === source.myId) + 1;
+  const isMvp = log.stats.slice().sort((a, b) => b.rating - a.rating)[0]?.id === source.myId;
+  const context = isMvp ? 'MVP da partida' : teamRank === 1 ? 'top do seu time' : teamRank <= 3 ? `${teamRank}º do seu time` : `carregado: ${teamRank}º do time`;
 
   return (
     <Shell title="Resultado">
@@ -84,6 +87,7 @@ export function Result() {
             {log.score[source.myTeam]} – {log.score[other]}
             <span className={styles.opp}> vs {log.teams[other].name}</span>
           </div>
+          <div className={isMvp || teamRank === 1 ? styles.contextGood : ui.muted}>{context}</div>
         </section>
 
         <section className={ui.grid3}>

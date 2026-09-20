@@ -22,8 +22,9 @@ import { CT_SETUP_LABEL, REASON_LABEL, T_CALL_LABEL } from '../match/format';
 import { liveStats } from '../match/stats';
 import { useReplay } from '../match/useReplay';
 import { DuelTargetGame, type DuelTargetStats } from '../minigames/duelTarget';
-import { getMatch } from '../store/matches';
-import { getOutcome, peekPendingMatch, setOutcome, type MatchSource } from '../store/pending';
+import { getMatch, saveMatch } from '../store/matches';
+import { getCharacter } from '../store/character';
+import { getOutcome, peekPendingMatch, setOutcome, setPendingMatch, type MatchSource } from '../store/pending';
 import { getSetting, setSetting } from '../store/settings';
 import { DuelTargetPanel } from '../minigames/DuelTargetPanel';
 import styles from './MatchScreen.module.css';
@@ -199,6 +200,39 @@ function MatchView({ source }: { source: MatchSource }) {
   }, [source.kind, nav]);
   const leaveLabel = source.kind === 'queue' ? 'Ver resultado' : source.kind === 'replay' ? 'Voltar ao perfil' : 'Nova partida';
 
+  // "sair": a queue match left early counts as a loss with rating 0 and no XP.
+  const exit = useCallback(async () => {
+    player.pause();
+    if (source.kind === 'queue' && !state.finished) {
+      const c = await getCharacter();
+      const other: 0 | 1 = source.myTeam === 0 ? 1 : 0;
+      const zero = log.stats.find((s) => s.id === source.myId)!;
+      if (c) {
+        await saveMatch({
+          playedAt: Date.now(),
+          seed: source.seed,
+          config: source.config,
+          score: log.score,
+          winner: other,
+          myTeam: source.myTeam,
+          myId: source.myId,
+          stats: { ...zero, kills: 0, deaths: 0, assists: 0, damage: 0, kastRounds: 0, headshots: 0, rating: 0, adr: 0, kast: 0 },
+          rating: 0,
+          rewards: { xp: 0, minigame: null, levelFrom: c.level, levelTo: c.level },
+          abandoned: true,
+        });
+      }
+      setPendingMatch(null);
+      setOutcome(null);
+    }
+    if (source.kind === 'queue' && state.finished) {
+      nav('/resultado');
+      return;
+    }
+    nav('/lobby');
+  }, [player, source, state.finished, log, nav]);
+  const exitLabel = source.kind === 'queue' ? 'Sair (conta como derrota)' : 'Fechar';
+
   return (
     <div className={styles.screen}>
       <div className={styles.headerArea}>
@@ -229,6 +263,8 @@ function MatchView({ source }: { source: MatchSource }) {
             onSpeed={(s) => player.setSpeed(s)}
             onNextRound={() => player.nextRound()}
             onSkipToEnd={() => player.skipToEnd()}
+            onExit={() => void exit()}
+            exitLabel={exitLabel}
           />
           <span className={`${styles.meta} mono`}>
             {source.kind === 'replay' ? 'replay · ' : ''}seed {seed}

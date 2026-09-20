@@ -48,4 +48,15 @@
   color: var(--ok);
   margin-left: 4px;
   font-size: 11px;
+  animation: fadeout 3s ease-in forwards;
+}
+
+@keyframes fadeout {
+  0%,
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
 }

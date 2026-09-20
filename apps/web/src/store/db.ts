@@ -35,6 +35,8 @@ export interface MatchRecord {
     levelFrom: number;
     levelTo: number;
   };
+  /** Left the match early: counted as a loss, rating 0, no XP. */
+  abandoned?: boolean;
 }
 
 export interface TrainingRecord {

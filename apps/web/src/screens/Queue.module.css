@@ -1,0 +1,47 @@
+.map {
+  font-size: 13px;
+  color: var(--text-1);
+}
+
+.teams {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+@media (min-width: 600px) {
+  .teams {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr auto 56px;
+  gap: 8px;
+  font-size: 13px;
+  padding: 3px 4px;
+  border-radius: 4px;
+}
+
+.me {
+  background: var(--accent-soft);
+  font-weight: 700;
+}
+
+.nick {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cls {
+  color: var(--text-2);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.lvl {
+  text-align: right;
+  color: var(--text-1);
+}

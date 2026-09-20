@@ -71,8 +71,22 @@
 }
 
 .tall {
-  aspect-ratio: 4 / 3;
+  aspect-ratio: auto;
+  height: calc(100vh - 250px);
+  height: calc(100dvh - 250px);
   min-height: 260px;
+  max-height: 640px;
+}
+
+.streak {
+  position: absolute;
+  right: 12px;
+  top: 4px;
+  font-size: 44px;
+  font-weight: 800;
+  color: var(--accent);
+  pointer-events: none;
+  text-shadow: 0 0 18px rgba(255, 106, 31, 0.5);
 }
 
 .timer {

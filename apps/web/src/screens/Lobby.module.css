@@ -45,6 +45,23 @@
   background: var(--ct);
 }
 
+.changed {
+  color: var(--ok);
+  font-size: 12px;
+  font-weight: 700;
+  animation: fadeout 3s ease-in forwards;
+}
+
+@keyframes fadeout {
+  0%,
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
 .actions {
   display: grid;
   grid-template-columns: 1fr 1fr;

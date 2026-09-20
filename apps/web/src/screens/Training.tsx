@@ -7,7 +7,7 @@ import { DM_ATTRS, FOCUS_OPTIONS, TRAINING, dailyYield, trainingGains, trainingM
 import { XP, attrCap } from '../progression/xp';
 import { applyGains, getCharacter, grantXp } from '../store/character';
 import { localDay } from '../store/db';
-import { getSetting } from '../store/settings';
+import { getSetting, setSetting } from '../store/settings';
 import { saveSession, sessionsToday } from '../store/training';
 import { useQuery } from '../store/useQuery';
 import { ATTR_LABEL, AttrBars } from '../ui/AttrBars';
@@ -23,6 +23,7 @@ export function Training({ mode }: { mode: TrainingMode }) {
   const { data: c } = useQuery(getCharacter);
   const { data: today } = useQuery(sessionsToday);
   const { data: seconds } = useQuery(() => getSetting(isDm ? 'dmSeconds' : 'treinoSeconds'), [mode]);
+  const { data: sound } = useQuery(() => getSetting('sound'));
   const [focus, setFocus] = useState<AttrKey>('mira');
   const [step, setStep] = useState<Step>({ kind: 'setup' });
   const y = dailyYield(today ?? 0);
@@ -76,6 +77,11 @@ export function Training({ mode }: { mode: TrainingMode }) {
                 {isDm ? '' : `+${TRAINING.FOCUS_GAIN} foco / +${TRAINING.SECONDARY_GAIN} secundário`} × minigame (1,0–1,5) × rendimento × (1 − (atual/cap)²)
               </div>
             </section>
+            <div className={ui.row}>
+              <button aria-pressed={Boolean(sound)} onClick={() => void setSetting('sound', !sound)}>
+                som: {sound ? 'ligado' : 'desligado'}
+              </button>
+            </div>
             <button className={`primary ${ui.big}`} disabled={!seconds} onClick={() => setStep({ kind: 'running', startedAt: Date.now(), focus })}>
               Começar
             </button>
@@ -88,6 +94,7 @@ export function Training({ mode }: { mode: TrainingMode }) {
               durationSec={seconds}
               spawnMs={isDm ? TRAINING.DM_SPAWN_MS : TRAINING.TREINO_SPAWN_MS}
               visibleMs={isDm ? TRAINING.DM_VISIBLE_MS : TRAINING.TREINO_VISIBLE_MS}
+              sound={Boolean(sound)}
               onFinish={(stats) => void finish(stats, step.startedAt, step.focus)}
             />
             <div className={ui.muted}>

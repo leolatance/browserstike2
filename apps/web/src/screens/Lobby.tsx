@@ -1,4 +1,9 @@
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { ATTR_KEYS, type Attrs } from '@idle-strike/engine';
+import { getSetting, setSetting, type LastSeen } from '../store/settings';
+import { sessionsToday } from '../store/training';
+import { dailyYield } from '../progression/training';
 import { attrCap, xpForLevel } from '../progression/xp';
 import { COUNTRIES, getCharacter } from '../store/character';
 import { career } from '../store/matches';
@@ -9,10 +14,45 @@ import { Shell } from '../ui/Shell';
 import ui from '../ui/ui.module.css';
 import styles from './Lobby.module.css';
 
+interface Changes {
+  deltas: Partial<Attrs>;
+  level: [number, number] | null;
+}
+
 export function Lobby() {
   const { data: c } = useQuery(getCharacter);
   const { data: cs } = useQuery(career);
+  const { data: today } = useQuery(sessionsToday);
+  const [changes, setChanges] = useState<Changes | null>(null);
+  const snapped = useRef(false);
+
+  // Highlight what changed since the last visit for 3s, then snapshot.
+  useEffect(() => {
+    if (!c || snapped.current) return;
+    snapped.current = true;
+    let timer = 0;
+    (async () => {
+      const last = await getSetting('lastSeen');
+      if (last) {
+        const deltas: Partial<Attrs> = {};
+        for (const k of ATTR_KEYS) {
+          const d = Math.round((c.attrs[k] - (last.attrs[k] ?? c.attrs[k])) * 100) / 100;
+          if (d > 0) deltas[k] = d;
+        }
+        const level: [number, number] | null = last.level !== c.level ? [last.level, c.level] : null;
+        if (Object.keys(deltas).length || level) {
+          setChanges({ deltas, level });
+          timer = window.setTimeout(() => setChanges(null), 3000);
+        }
+      }
+      const snap: LastSeen = { attrs: { ...c.attrs }, level: c.level, at: Date.now() };
+      await setSetting('lastSeen', snap);
+    })();
+    return () => clearTimeout(timer);
+  }, [c]);
+
   if (!c) return <Shell title="Lobby">{null}</Shell>;
+  const fullLeft = Math.min(today ?? 0, 3);
   const need = xpForLevel(c.level);
   const flag = COUNTRIES.find((x) => x.code === c.country)?.flag ?? '';
   const cap = attrCap(c.level);
@@ -27,6 +67,11 @@ export function Lobby() {
                 {c.nick} <span className={styles.flag}>{flag}</span>
               </div>
               <div className={ui.muted}>sem patente · Rifler</div>
+              {changes?.level && (
+                <div className={styles.changed}>
+                  nível {changes.level[0]} → {changes.level[1]} · cap {attrCap(changes.level[1]).toFixed(1)}
+                </div>
+              )}
               <div className={styles.level}>
                 <span className="mono">lvl {c.level}</span>
                 <div className={styles.xpTrack} aria-label={`XP ${c.xp} de ${need}`}>
@@ -52,7 +97,10 @@ export function Lobby() {
 
         <section className={ui.card}>
           <span className={ui.h2}>Atributos · cap {cap.toFixed(1)}</span>
-          <AttrBars attrs={c.attrs} cap={cap} />
+          <AttrBars attrs={c.attrs} cap={cap} deltas={changes?.deltas} />
+          <span className={ui.muted}>
+            sessões cheias hoje: {fullLeft}/3 · rendimento agora: <b className={dailyYield(today ?? 0).label === 'alto' ? 'ct' : dailyYield(today ?? 0).label === 'médio' ? 't' : ''}>{dailyYield(today ?? 0).label}</b>
+          </span>
         </section>
 
         <section className={styles.actions}>

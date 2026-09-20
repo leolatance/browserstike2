@@ -17,6 +17,11 @@
   color: var(--text-1);
 }
 
+.contextGood {
+  color: var(--accent);
+  font-weight: 700;
+}
+
 .ratingStat b {
   color: var(--accent);
 }

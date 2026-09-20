@@ -10,6 +10,11 @@
   gap: 2px;
 }
 
+.exit {
+  margin-left: auto;
+  color: var(--text-2);
+}
+
 .speeds button {
   min-width: 40px;
   padding: 6px 6px;

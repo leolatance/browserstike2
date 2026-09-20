@@ -7,9 +7,11 @@ interface Props {
   onSpeed: (s: Speed) => void;
   onNextRound: () => void;
   onSkipToEnd: () => void;
+  onExit: () => void;
+  exitLabel: string;
 }
 
-export function Controls({ state, onToggle, onSpeed, onNextRound, onSkipToEnd }: Props) {
+export function Controls({ state, onToggle, onSpeed, onNextRound, onSkipToEnd, onExit, exitLabel }: Props) {
   return (
     <div className={styles.bar}>
       <button className="primary" onClick={onToggle} disabled={state.finished} aria-label={state.playing ? 'Pausar' : 'Reproduzir'}>
@@ -27,6 +29,9 @@ export function Controls({ state, onToggle, onSpeed, onNextRound, onSkipToEnd }:
       </button>
       <button onClick={onSkipToEnd} disabled={state.finished} title="Pular pro fim">
         fim ⏭
+      </button>
+      <button onClick={onExit} title={exitLabel} className={styles.exit}>
+        sair
       </button>
     </div>
   );

@@ -1,14 +1,26 @@
 import { db, notify } from './db';
 import { TRAINING } from '../progression/training';
 
+export interface LastSeen {
+  attrs: Record<string, number>;
+  level: number;
+  at: number;
+}
+
 export interface Settings {
   minigame: boolean;
+  /** Hit sound in training/DM (off by default). */
+  sound: boolean;
+  /** Snapshot taken when the lobby was last shown, to highlight what changed. */
+  lastSeen: LastSeen | null;
   treinoSeconds: number;
   dmSeconds: number;
 }
 
 export const SETTING_DEFAULTS: Settings = {
   minigame: true,
+  sound: false,
+  lastSeen: null,
   /** Session lengths (seconds) — editable for testing: __db.db.settings.put({key:'treinoSeconds', value: 30}) */
   treinoSeconds: TRAINING.TREINO_SECONDS,
   dmSeconds: TRAINING.DM_SECONDS,
