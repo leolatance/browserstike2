@@ -4,8 +4,10 @@
  */
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+// Tolerate a trailing slash / stray whitespace in the env values (a common paste mistake).
+const clean = (v: unknown) => (typeof v === 'string' ? v.trim().replace(/\/+$/, '') : undefined) || undefined;
+const url = clean(import.meta.env.VITE_SUPABASE_URL);
+const key = clean(import.meta.env.VITE_SUPABASE_ANON_KEY);
 
 export const supabase: SupabaseClient | null = url && key ? createClient(url, key, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } }) : null;
 export const cloudEnabled = supabase !== null;
