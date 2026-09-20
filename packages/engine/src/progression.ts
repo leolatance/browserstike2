@@ -15,6 +15,8 @@ export const XP = {
   MAX_LEVEL: 50, // [v0] GDD 3.1
   /** Training / DM sessions give a small fixed XP (GDD 4: "baixo"). [v0] */
   TRAINING: 15,
+  /** x1 vs bot: match formula on a smaller base. [v0] */
+  X1_BASE: 25,
 };
 
 export function clampNum(v: number, min: number, max: number): number {
@@ -44,6 +46,8 @@ export interface MatchXpInput {
   rating: number;
   minigameAvg: number | null;
   mode: 'solo' | 'online';
+  /** Base XP override (x1 vs bot uses X1_BASE). Defaults to XP.BASE. */
+  base?: number;
 }
 
 export interface MatchXpBreakdown {
@@ -61,7 +65,8 @@ export function matchXp(input: MatchXpInput): MatchXpBreakdown {
   const desempenho = performanceMult(input.rating);
   const minigame = minigameMult(input.minigameAvg);
   const mode = input.mode === 'online' ? XP.MODE_ONLINE : XP.MODE_SOLO;
-  return { xp: Math.round(XP.BASE * result * desempenho * minigame * mode), base: XP.BASE, result, desempenho, minigame, mode };
+  const base = input.base ?? XP.BASE;
+  return { xp: Math.round(base * result * desempenho * minigame * mode), base, result, desempenho, minigame, mode };
 }
 
 export interface LevelState {

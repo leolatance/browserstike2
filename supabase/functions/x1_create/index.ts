@@ -8,7 +8,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { START_DELAY_MS, inviteCode, x1Config, x1Delta, type X1Player } from '../_shared/x1.ts';
 
 const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type' };
-const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
+const json = (body: Record<string, unknown>, status = 200) => new Response(JSON.stringify({ ...body, serverNow: Date.now() }), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
@@ -33,9 +33,17 @@ Deno.serve(async (req) => {
       const kind = body.kind === 'mira' ? 'mira' : 'build';
       const code = inviteCode(Math.random);
       const targetNick = typeof body.targetNick === 'string' && body.targetNick.trim() ? body.targetNick.trim() : null;
-      const { error } = await db.from('x1_invites').insert({ code, host_id: uid, kind, target_nick: targetNick });
+      const { data: hp } = await db.from('profiles').select('nick').eq('user_id', uid).maybeSingle();
+      if (!hp) return json({ error: 'no_character' }, 400);
+      const { error } = await db.from('x1_invites').insert({ code, host_id: uid, host_nick: hp.nick, kind, target_nick: targetNick });
       if (error) return json({ error: error.message }, 500);
       return json({ code, kind });
+    }
+    case 'peek': {
+      const code = String(body.code ?? '').toUpperCase();
+      const { data: inv } = await db.from('x1_invites').select('*').eq('code', code).maybeSingle();
+      if (!inv) return json({ error: 'invite_not_found' }, 404);
+      return json({ kind: inv.kind, hostNick: inv.host_nick, hostId: inv.host_id, matchId: inv.match_id, targetNick: inv.target_nick });
     }
     case 'accept': {
       const code = String(body.code ?? '').toUpperCase();
@@ -44,7 +52,7 @@ Deno.serve(async (req) => {
       if (inv.host_id === uid) return json({ error: 'own_invite' }, 400);
       if (inv.match_id) {
         const { data: m } = await db.from('x1_matches').select('*').eq('id', inv.match_id).single();
-        return json({ match: m, rematch: false });
+        return json({ match: m as Record<string, unknown> | null, rematch: false });
       }
       const [host, guest] = await Promise.all([loadPlayer(inv.host_id), loadPlayer(uid)]);
       if (!host || !guest) return json({ error: 'no_character' }, 400);
@@ -57,7 +65,7 @@ Deno.serve(async (req) => {
         .single();
       if (error || !m) return json({ error: error?.message ?? 'insert_failed' }, 500);
       await db.from('x1_invites').update({ accepted_by: uid, match_id: m.id }).eq('code', code);
-      return json({ match: m });
+      return json({ match: m as Record<string, unknown> });
     }
     case 'result':
     case 'wo': {
@@ -65,7 +73,7 @@ Deno.serve(async (req) => {
       const { data: m } = await db.from('x1_matches').select('*').eq('id', matchId).maybeSingle();
       if (!m) return json({ error: 'match_not_found' }, 404);
       if (m.host_id !== uid && m.guest_id !== uid) return json({ error: 'forbidden' }, 403);
-      if (m.status !== 'ready') return json({ ok: true, already: true, result: m.result });
+      if (m.status !== 'ready') return json({ ok: true, already: true, result: m.result as Record<string, unknown> });
       const iAmHost = m.host_id === uid;
       let winner: 'host' | 'guest';
       let score: [number, number];
