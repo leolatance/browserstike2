@@ -96,8 +96,10 @@ export function Lobby() {
               <div className={styles.nick}>
                 {c.nick} <span className={styles.flag}>{flag}</span>
               </div>
-              <div className={ui.muted}>
-                {mine ? <RankIcon mmr={mine.mmr} size={18} withName /> : 'sem patente'} · {classWithSetLabel({ cards: build ?? [] })}
+              <div className={`${ui.muted} ${styles.rankLine}`}>
+                {mine ? <RankIcon mmr={mine.mmr} size={16} withName /> : <span>sem patente</span>}
+                <span>·</span>
+                <span>{classWithSetLabel({ cards: build ?? [] })}</span>
               </div>
               {changes?.level && (
                 <div className={styles.changed}>

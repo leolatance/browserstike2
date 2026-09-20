@@ -3,6 +3,7 @@
   grid-template-columns: 36px 26px 1fr 60px 40px;
   gap: 8px;
   align-items: center;
+  line-height: 22px;
   padding: 5px 0;
   border-bottom: 1px solid var(--line);
   font-size: 13px;

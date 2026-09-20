@@ -62,6 +62,14 @@
   color: var(--text-1);
 }
 
+.rankLine {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  line-height: 16px;
+}
+
 .changed {
   color: var(--ok);
   font-size: 12px;
