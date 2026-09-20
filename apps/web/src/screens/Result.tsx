@@ -164,9 +164,11 @@ export function Result() {
           {p ? (
             <>
               <div className={`${styles.xp} mono`}>+{p.xp.xp} XP</div>
-              <div className={ui.muted}>
-                {p.xp.base} × resultado {p.xp.result.toFixed(1)} × desempenho {p.xp.performance.toFixed(2)} × minigame {p.xp.minigame.toFixed(2)} × modo solo
-              </div>
+              {import.meta.env.DEV && (
+                <div className={ui.muted}>
+                  {p.xp.base} × resultado {p.xp.result.toFixed(1)} × desempenho {p.xp.performance.toFixed(2)} × minigame {p.xp.minigame.toFixed(2)} × modo solo
+                </div>
+              )}
               {p.reached.length > 0 ? (
                 <div className={styles.levelUp}>
                   <div className={styles.levelBadge}>LEVEL UP</div>

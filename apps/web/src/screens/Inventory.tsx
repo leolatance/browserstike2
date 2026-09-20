@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CARDS, CLASS_LABEL, RARITY_NAME, card, type Card, type CardRarity, type PlayerClass } from '@idle-strike/engine';
 import { listCards, openBox, unopenedBoxes, type Reveal } from '../store/cards';
+import { getCharacter } from '../store/character';
 import { useQuery } from '../store/useQuery';
 import { BoxOpen } from '../ui/BoxOpen';
 import { CardView } from '../ui/CardView';
@@ -15,6 +16,7 @@ type ClassFilter = 'all' | PlayerClass;
 export function Inventory() {
   const { data: owned } = useQuery(listCards);
   const { data: boxes } = useQuery(unopenedBoxes);
+  const { data: ch } = useQuery(getCharacter);
   const [type, setType] = useState<TypeFilter>('all');
   const [cls, setCls] = useState<ClassFilter>('all');
   const [reveals, setReveals] = useState<Reveal[] | null>(null);
@@ -45,6 +47,9 @@ export function Inventory() {
             </span>
             <span className={ui.muted}>
               boxes não abertas: <b className="mono">{boxes?.length ?? 0}</b>
+            </span>
+            <span className={ui.muted} title="Craft em breve">
+              pó: <b className="mono">{ch?.dust ?? 0}</b>
             </span>
             <button className="primary" disabled={!boxes?.length || reveals !== null} onClick={() => void open()}>
               Abrir box
@@ -85,7 +90,7 @@ export function Inventory() {
               </span>
               <div className={styles.grid}>
                 {group.map(({ card: c, row }) => (
-                  <CardView key={c.id} card={card(c.id)} level={row?.level ?? 1} dimmed={!row} badge={row && row.qty > 1 ? `×${row.qty}` : undefined} />
+                  <CardView key={c.id} card={card(c.id)} level={row?.level ?? 1} dimmed={!row} />
                 ))}
               </div>
             </section>

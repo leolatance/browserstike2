@@ -17,6 +17,8 @@ export interface CharacterRecord {
   createdAt: number;
   /** Equipped cards in slot order (v2). */
   build: EquippedCard[];
+  /** Dust from extra copies beyond level III (v3). Craft comes later. */
+  dust: number;
 }
 
 export interface CardRecord {
@@ -108,6 +110,17 @@ export class IdleStrikeDB extends Dexie {
           .toCollection()
           .modify((c: Partial<CharacterRecord>) => {
             c.build ??= [];
+          }),
+      );
+    // v3: dust from extra copies.
+    this.version(3)
+      .stores({})
+      .upgrade((tx) =>
+        tx
+          .table('character')
+          .toCollection()
+          .modify((c: Partial<CharacterRecord>) => {
+            c.dust ??= 0;
           }),
       );
   }

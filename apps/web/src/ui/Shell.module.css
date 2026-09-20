@@ -9,6 +9,9 @@
   align-items: center;
   gap: 12px;
   padding: 8px 12px;
+  padding-top: calc(8px + env(safe-area-inset-top));
+  padding-left: calc(12px + env(safe-area-inset-left));
+  padding-right: calc(12px + env(safe-area-inset-right));
   background: var(--bg-1);
   border-bottom: 1px solid var(--line);
   position: sticky;

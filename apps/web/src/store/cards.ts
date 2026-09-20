@@ -5,6 +5,9 @@
 import { CARDS, CARD_LEVEL_MAX, RARITY_DROP, Rng, card, type Card, type CardId, type CardLevel, type CardRarity, type EquippedCard } from '@idle-strike/engine';
 import { db, notify, type BoxRecord, type CardRecord } from './db';
 
+/** Dust per extra copy, by rarity (GDD 7: duplicata → pó). [v1] */
+export const DUST_BY_RARITY: Record<CardRarity, number> = { 1: 10, 2: 25, 3: 60, 4: 150, 5: 400 };
+
 export const DROPS = {
   /** Cards per match box (GDD 8.1: 1 box per solo match). [v1] 2 → first 3-card set after ~9 matches (p50 9, p90 16). */
   MATCH_BOX_CARDS: 2,
@@ -69,8 +72,9 @@ export interface Reveal {
   /** Level before / after (null before = new card). */
   from: CardLevel | null;
   to: CardLevel;
-  /** Already at III: the copy is kept as qty (dust later). */
+  /** Already at III: the copy became dust. */
   overflow: boolean;
+  dust: number;
 }
 
 /** Opens a box: each card either enters the inventory or levels up a duplicate. */
@@ -78,21 +82,27 @@ export async function openBox(boxId: number): Promise<Reveal[]> {
   const box = await db.boxes.get(boxId);
   if (!box || box.opened) return [];
   const reveals: Reveal[] = [];
-  await db.transaction('rw', db.cards, db.boxes, async () => {
+  await db.transaction('rw', db.cards, db.boxes, db.character, async () => {
+    let dust = 0;
     for (const id of box.cards) {
       const c = card(id);
       const row = await db.cards.get(id);
       if (!row) {
         await db.cards.put({ id, qty: 1, level: 1, acquiredAt: Date.now() });
-        reveals.push({ card: c, from: null, to: 1, overflow: false });
+        reveals.push({ card: c, from: null, to: 1, overflow: false, dust: 0 });
       } else if (row.level < CARD_LEVEL_MAX) {
         const to = (row.level + 1) as CardLevel;
         await db.cards.put({ ...row, level: to });
-        reveals.push({ card: c, from: row.level, to, overflow: false });
+        reveals.push({ card: c, from: row.level, to, overflow: false, dust: 0 });
       } else {
-        await db.cards.put({ ...row, qty: row.qty + 1 });
-        reveals.push({ card: c, from: row.level, to: row.level, overflow: true });
+        const d = DUST_BY_RARITY[c.rarity];
+        dust += d;
+        reveals.push({ card: c, from: row.level, to: row.level, overflow: true, dust: d });
       }
+    }
+    if (dust) {
+      const ch = await db.character.get(1);
+      if (ch) await db.character.update(1, { dust: (ch.dust ?? 0) + dust });
     }
     await db.boxes.update(boxId, { opened: true });
   });

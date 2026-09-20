@@ -10,6 +10,8 @@
     'board';
   gap: var(--gap);
   padding: var(--gap);
+  padding-top: calc(var(--gap) + env(safe-area-inset-top));
+  padding-bottom: calc(var(--gap) + env(safe-area-inset-bottom));
   max-width: 560px;
   margin: 0 auto;
 }

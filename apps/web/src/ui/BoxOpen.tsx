@@ -37,7 +37,7 @@ export function BoxOpen({ reveals, title = 'Box de cartas', onDone }: Props) {
       <div className={styles.stage}>
         {current ? (
           <div className={`${styles.flip} ${flipping ? styles.flipping : ''}`} key={shown}>
-            <CardView card={current.card} level={current.to} badge={current.from === null ? 'novo' : current.overflow ? 'extra' : `${roman(current.from)} → ${roman(current.to)}`} />
+            <CardView card={current.card} level={current.to} badge={current.from === null ? 'novo' : current.overflow ? `+${current.dust} pó` : `${roman(current.from)} → ${roman(current.to)}`} />
           </div>
         ) : (
           <div className={styles.back}>toque para abrir</div>
@@ -48,7 +48,7 @@ export function BoxOpen({ reveals, title = 'Box de cartas', onDone }: Props) {
           {current.card.name} {roman(current.from)} → {roman(current.to)}
         </div>
       )}
-      {current && current.overflow && <div className={styles.muted}>já está no nível III · cópia guardada</div>}
+      {current && current.overflow && <div className={styles.muted}>já está no nível III · +{current.dust} pó</div>}
       <div className={styles.hint}>{shown >= reveals.length ? 'toque para continuar' : 'toque para a próxima'}</div>
       <div className={styles.dots}>
         {reveals.map((r, i) => (
