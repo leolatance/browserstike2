@@ -18,6 +18,8 @@ export interface Settings {
   photoUploadedAt: number | null;
   /** Passive online participations already shown in the lobby. */
   seenParticipations: number;
+  /** Let the character be recruited into online lobbies while the owner is away (GDD 4.4). */
+  availablePassive: boolean;
   treinoSeconds: number;
   dmSeconds: number;
 }
@@ -29,6 +31,7 @@ export const SETTING_DEFAULTS: Settings = {
   lastPushAt: null,
   photoUploadedAt: null,
   seenParticipations: 0,
+  availablePassive: true,
   /** Session lengths (seconds) — editable for testing: __db.db.settings.put({key:'treinoSeconds', value: 30}) */
   treinoSeconds: TRAINING.TREINO_SECONDS,
   dmSeconds: TRAINING.DM_SECONDS,

@@ -7,7 +7,7 @@
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { applyXp, CARDS, RARITY_DROP, Rng, MMR, rankOf } from '../_shared/engine.js';
-import { buildLobby, logHash, rangeForAttempt, settle, type QueueUser } from '../_shared/queue.ts';
+import { PASSIVE_BOX_CHANCE, buildLobby, logHash, rangeForAttempt, settle, type QueueUser } from '../_shared/queue.ts';
 
 const RATE_LIMIT_SECONDS = 180;
 const MATCH_BOX_CARDS = 2;
@@ -91,7 +91,20 @@ Deno.serve(async (req) => {
     .single();
   if (mErr || !match) return json({ error: mErr?.message ?? 'insert_failed' }, 500);
 
-  await db.from('online_participations').insert(participations.map((p) => ({ match_id: match.id, ...p, seen: p.present })));
+  // Passives: 5% chance of a box (2 cards), granted here and shown in their lobby later.
+  const passiveRng = new Rng((seed ^ 0x51ed270b) >>> 0);
+  const passiveCards = new Map<string, string[]>();
+  for (const p of participations.filter((x) => !x.present)) {
+    if (!passiveRng.chance(PASSIVE_BOX_CHANCE)) continue;
+    const ids = rollCards(passiveRng, MATCH_BOX_CARDS);
+    passiveCards.set(p.user_id, ids);
+    for (const id of ids) {
+      const { data: row } = await db.from('cards').select('qty, level').eq('user_id', p.user_id).eq('card_id', id).maybeSingle();
+      if (!row) await db.from('cards').insert({ user_id: p.user_id, card_id: id, qty: 1, level: 1 });
+      else if (row.level < 3) await db.from('cards').update({ level: row.level + 1 }).eq('user_id', p.user_id).eq('card_id', id);
+    }
+  }
+  await db.from('online_participations').insert(participations.map((p) => ({ match_id: match.id, ...p, seen: p.present, cards: passiveCards.get(p.user_id) ?? null })));
   await db.from('queue_locks').upsert({ user_id: uid, last_queue_at: new Date().toISOString() });
 
   // Rewards (server-side only): MMR, XP/level, a 2-card box.

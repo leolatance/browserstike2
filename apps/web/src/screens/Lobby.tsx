@@ -8,7 +8,10 @@ import { sessionsToday } from '../store/training';
 import { dailyYield } from '../progression/training';
 import { useSession } from '../store/auth';
 import { cloudEnabled } from '../store/supabase';
-import { fetchMyMmr, markSeen, unseenPassive, type PassiveSummary } from '../store/online';
+import { fetchMyMmr, markSeen, unseenPassive, type PassiveRow } from '../store/online';
+import { setPendingMatch } from '../store/pending';
+import { useNavigate } from 'react-router-dom';
+import { card } from '@idle-strike/engine';
 import { RankIcon } from '../ui/RankIcon';
 import { attrCap, xpForLevel } from '../progression/xp';
 import { COUNTRIES, getCharacter } from '../store/character';
@@ -34,14 +37,22 @@ export function Lobby() {
   const [changes, setChanges] = useState<Changes | null>(null);
   const { session } = useSession();
   const { data: mine } = useQuery(() => (session ? fetchMyMmr() : Promise.resolve(null)), [session?.user.id]);
-  const [passive, setPassive] = useState<PassiveSummary | null>(null);
+  const nav = useNavigate();
+  const [passive, setPassive] = useState<PassiveRow[]>([]);
   useEffect(() => {
     if (!session) return;
-    unseenPassive().then((p) => {
-      setPassive(p);
-      if (p) void markSeen(p.ids);
-    });
+    unseenPassive().then(setPassive);
   }, [session]);
+  const dismissPassive = async () => {
+    await markSeen(passive.map((p) => p.id));
+    setPassive([]);
+  };
+  const replayPassive = async (p: PassiveRow) => {
+    if (!p.match) return;
+    await markSeen([p.id]);
+    setPendingMatch({ kind: 'replay', seed: p.match.seed, config: p.match.config, myId: p.player_id, myTeam: p.team });
+    nav('/match');
+  };
   const snapped = useRef(false);
 
   // Highlight what changed since the last visit for 3s, then snapshot.
@@ -83,11 +94,25 @@ export function Lobby() {
             <span>entre com e-mail ou Google pra guardar o boneco na nuvem e jogar a queue online</span>
           </Link>
         )}
-        {passive && (
-          <div className={styles.notice}>
-            <b>seu boneco jogou {passive.count} {passive.count === 1 ? 'partida' : 'partidas'} enquanto você tava fora</b>
-            <span>rating {passive.avgRating.toFixed(2)} · passivo não mexe na patente</span>
-          </div>
+        {passive.length > 0 && (
+          <section className={ui.card}>
+            <span className={ui.h2}>Enquanto você tava fora · {passive.length} {passive.length === 1 ? 'partida' : 'partidas'}</span>
+            <span className={ui.muted}>passivo não mexe em patente, rating de carreira nem forma · +15 XP cada · 5% de box</span>
+            {passive.map((p) => (
+              <div key={p.id} className={styles.passiveRow}>
+                <span className={p.won ? 'ct' : ''} style={!p.won ? { color: 'var(--danger)' } : undefined}>{p.won ? 'V' : 'D'}</span>
+                <span className="mono">{p.match ? `${p.match.result.score[p.team]}–${p.match.result.score[p.team === 0 ? 1 : 0]}` : '–'}</span>
+                <span className="mono">{p.rating.toFixed(2)}</span>
+                <span className={ui.muted}>{p.cards?.length ? `box: ${p.cards.map((c) => card(c).name).join(', ')}` : ''}</span>
+                <button disabled={!p.match} onClick={() => void replayPassive(p)}>
+                  rever
+                </button>
+              </div>
+            ))}
+            <div className={ui.row}>
+              <button onClick={() => void dismissPassive()}>ok, vi</button>
+            </div>
+          </section>
         )}
         <section className={`${ui.card} ${styles.hero}`}>
           <div className={styles.identity}>

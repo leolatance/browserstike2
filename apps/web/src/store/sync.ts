@@ -172,7 +172,7 @@ export async function push(): Promise<void> {
         await setSetting('photoUploadedAt', Date.now());
       }
     }
-    const profile: Record<string, unknown> = { user_id: uid, nick: c.nick, country: c.country, color: c.color };
+    const profile: Record<string, unknown> = { user_id: uid, nick: c.nick, country: c.country, color: c.color, available_passive: await getSetting('availablePassive') };
     if (photo_url) profile.photo_url = photo_url;
     const { error: pErr } = await supabase.from('profiles').upsert(profile, { onConflict: 'user_id' });
     if (pErr) {

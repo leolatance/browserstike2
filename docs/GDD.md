@@ -113,7 +113,7 @@ Recompensa (ver 8) — XP e box de cartas. **Não sobe barra.**
 **Assíncrono.** Ao entrar na queue, o servidor monta o 5x5 com **bonecos de jogadores reais** de MMR próximo (presentes ou não), completa com bots nivelados se faltar, simula com seed, grava. O cliente reproduz o log.
 
 - Boneco **presente** (dono na partida): MMR e rating cheios, recompensa cheia.
-- Boneco **passivo** (recrutado sem o dono online): joga com atributos e build reais; rating conta com peso 0.5; MMR não muda; dono recebe XP pequeno e notificação ("seu boneco jogou 3 partidas: 1.14 de rating").
+- Boneco **passivo** (recrutado sem o dono online): joga com atributos e build reais. `[v1]` **Não toca em nada de progressão competitiva**: MMR não muda, rating de carreira e forma ignoram partidas passivas (peso 0, não 0,5). O dono recebe XP fixo pequeno (15) e 5% de chance de box; o lobby lista as partidas passivas não vistas (placar, rating naquela partida, "rever" pela seed/config do servidor) e a lista some ao marcar como vista. Opt-in no perfil: "disponível pra partidas quando estou fora", ligado por padrão; desligado, o boneco sai do pool da edge function (`profiles.available_passive`).
 - Bot: não gera nada pra ninguém.
 
 Lobby ao vivo com amigos = Fase 4.
@@ -332,7 +332,7 @@ Rating = 0.0073·KAST + 0.3591·KPR − 0.5329·DPR + 0.2372·Impact + 0.0032·A
 `[v1]` Testou-se comprimir os termos por round (×0.75) pra caber a std em 0.15–0.25; revertido — a faixa é que estava errada (ver 5.8). Um 30-bomb continua valendo ~1.5.
 Ajuste por role `[v0]`: Âncora +0.05 por round sobrevivido em defesa; Support conta flash assist como 0.5 kill no Impact; IGL soma +0.03 por round vencido em call correta.
 
-Rating de carreira = média ponderada (últimas 50 partidas peso 2, resto peso 1). Forma = média das últimas 10.
+Rating de carreira = média ponderada (últimas 50 partidas peso 2, resto peso 1). Forma = média das últimas 10. `[v1]` Só partidas com o dono presente (solo e online presente) entram; participações passivas ficam fora do rating de carreira, da forma e do `ladder_rating`.
 
 ### 8.3 Patente / MMR (Fase 2)
 Elo com K=25 `[v0]`. Amortecimento por desempenho:

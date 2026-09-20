@@ -10,6 +10,7 @@ import { resizeToJpeg } from '../ui/photo';
 import { signOut, useSession } from '../store/auth';
 import { cloudEnabled } from '../store/supabase';
 import { NickTakenError, onSync, push, type SyncStatus } from '../store/sync';
+import { getSetting, setSetting } from '../store/settings';
 import { updateCharacter } from '../store/character';
 import { useQuery } from '../store/useQuery';
 import { Shell } from '../ui/Shell';
@@ -88,6 +89,7 @@ export function Profile() {
   };
   const { data: c } = useQuery(getCharacter);
   const { data: all } = useQuery(() => db.matches.toArray());
+  const { data: availablePassive } = useQuery(() => getSetting('availablePassive'));
   const cs = all ? careerFromMatches(all) : null;
   const last20: MatchRecord[] = all ? all.slice().sort((a, b) => b.playedAt - a.playedAt).slice(0, 20) : [];
   return (
@@ -130,6 +132,12 @@ export function Profile() {
                   <span>{session.user.email ?? session.user.id}</span>
                   <span className={ui.muted}>sync: {sync === 'error' ? 'erro' : sync === 'pushing' ? 'enviando…' : 'ok'}</span>
                   <button onClick={() => void signOut()}>Sair</button>
+                </div>
+                <div className={ui.row}>
+                  <button aria-pressed={Boolean(availablePassive)} onClick={() => void setSetting('availablePassive', !availablePassive)}>
+                    disponível pra partidas quando estou fora: {availablePassive ? 'sim' : 'não'}
+                  </button>
+                  <span className={ui.muted}>desligado, seu boneco sai do pool da queue online</span>
                 </div>
                 {c && (
                   <div className={ui.row}>

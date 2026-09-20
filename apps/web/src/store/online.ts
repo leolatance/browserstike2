@@ -76,18 +76,29 @@ export async function fetchMyMmr(): Promise<MyMmr | null> {
   return { mmr: (data?.mmr as number) ?? 1000, matches: (data?.matches as number) ?? 0, seasonId: season as number };
 }
 
-export interface PassiveSummary {
-  count: number;
-  avgRating: number;
-  ids: number[];
+export interface PassiveRow {
+  id: number;
+  rating: number;
+  won: boolean;
+  team: 0 | 1;
+  player_id: string;
+  xp: number;
+  cards: string[] | null;
+  played_at: string;
+  match: { id: number; seed: number; config: { mapId: string; teams: [Team, Team]; startingCT: 0 | 1 }; result: { score: [number, number]; winner: 0 | 1 } } | null;
 }
 
 /** Passive participations not shown yet (the character played while the owner was away). */
-export async function unseenPassive(): Promise<PassiveSummary | null> {
-  if (!supabase) return null;
-  const { data } = await supabase.from('online_participations').select('id, rating').eq('present', false).eq('seen', false);
-  if (!data || data.length === 0) return null;
-  return { count: data.length, avgRating: data.reduce((s, r) => s + (r.rating as number), 0) / data.length, ids: data.map((r) => r.id as number) };
+export async function unseenPassive(): Promise<PassiveRow[]> {
+  if (!supabase) return [];
+  const { data } = await supabase
+    .from('online_participations')
+    .select('id, rating, won, team, player_id, xp, cards, played_at, match:online_matches(id, seed, config, result)')
+    .eq('present', false)
+    .eq('seen', false)
+    .order('played_at', { ascending: false })
+    .limit(20);
+  return ((data as unknown as PassiveRow[]) ?? []).map((r) => ({ ...r, match: Array.isArray(r.match) ? ((r.match as unknown[])[0] as PassiveRow['match']) ?? null : r.match }));
 }
 
 export async function markSeen(ids: number[]): Promise<void> {

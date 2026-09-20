@@ -4,6 +4,7 @@ import { CLASS_LABEL, card, displayRating, rankOf, resolveBuild } from '@idle-st
 import { logHash } from '../store/online';
 import { getOutcome, setPendingMatch } from '../store/pending';
 import { pullNow } from '../store/sync';
+import { saveMatch } from '../store/matches';
 import { CardView } from '../ui/CardView';
 import { RankIcon } from '../ui/RankIcon';
 import { Shell } from '../ui/Shell';
@@ -24,7 +25,25 @@ export function ResultOnline() {
     if (once.current) return;
     once.current = true;
     setPendingMatch(null);
-    void pullNow().finally(() => setPulled(true));
+    const src = outcome.source;
+    const st = outcome.log.stats.find((s) => s.id === src.myId);
+    const rw = src.online?.rewards;
+    const save = st && rw
+      ? saveMatch({
+          playedAt: Date.now(),
+          seed: src.seed,
+          config: src.config,
+          score: outcome.log.score,
+          winner: outcome.log.winner,
+          myTeam: src.myTeam,
+          myId: src.myId,
+          stats: st,
+          rating: st.rating,
+          rewards: { xp: rw.xp, minigame: outcome.minigame, levelFrom: rw.level - rw.reached.length, levelTo: rw.level },
+          mode: 'online',
+        })
+      : Promise.resolve();
+    void save.then(() => pullNow()).finally(() => setPulled(true));
   }, [outcome, nav]);
   if (!outcome || outcome.source.kind !== 'online' || !outcome.source.online) return null;
   const { log, source } = outcome;

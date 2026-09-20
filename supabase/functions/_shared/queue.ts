@@ -106,7 +106,12 @@ export interface Settlement {
   participations: Participation[];
 }
 
-/** Simulates and computes rewards: the present user moves MMR and earns XP ×1.6; passives keep MMR and get a quarter of the XP. */
+/** Passive characters (owner away): fixed small XP, no MMR, no career rating (GDD 4.4 v1). */
+export const PASSIVE_XP = 15;
+/** Chance a passive participation drops a box. */
+export const PASSIVE_BOX_CHANCE = 0.05;
+
+/** Simulates and computes rewards: the present user moves MMR and earns XP ×1.6; passives keep MMR and get PASSIVE_XP. */
 export function settle(lobby: Lobby, presentUserId: string): Settlement {
   const log = simulateMatch({ map: MAP01, teams: lobby.teams, startingCT: lobby.startingCT }, lobby.seed) as unknown as MatchLog;
   const teamMmr = (team: 0 | 1) => {
@@ -123,7 +128,7 @@ export function settle(lobby: Lobby, presentUserId: string): Settlement {
     const expected = expectedScore(teamMmr(lp.team), teamMmr(lp.team === 0 ? 1 : 0));
     const delta = present ? mmrDelta(won, expected, stats.rating) : 0;
     const full = matchXp({ won, rating: stats.rating, minigameAvg: null, mode: 'online' }).xp as number;
-    participations.push({ user_id: lp.user_id, present, team: lp.team, player_id: lp.player.id, rating: stats.rating, mmr_delta: delta, xp: present ? full : Math.round(full * 0.25), won });
+    participations.push({ user_id: lp.user_id, present, team: lp.team, player_id: lp.player.id, rating: stats.rating, mmr_delta: delta, xp: present ? full : PASSIVE_XP, won });
   }
   return { log, participations };
 }
