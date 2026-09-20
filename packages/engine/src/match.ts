@@ -6,7 +6,7 @@
 import { addMoney, freshInventory, nextLossStreak, OT_START_MONEY, roundIncome, START_MONEY } from './economy';
 import type { MatchEvent, MatchLog, MatchLogTeam, PlayerStats, RoundSummary, Side, TCall } from './events';
 import type { MapDef } from './map';
-import { clampAttr, initialMental, type Team } from './player';
+import { clampAttr, initialMental, resolveBuild, type Team } from './player';
 import { ratingBreakdown } from './rating';
 import { Rng } from './rng';
 import { simulateRound, type RoundPlayer, type RoundTeam } from './round';
@@ -86,6 +86,7 @@ export function simulateMatch(config: MatchConfig, seed: number): MatchLog {
       ct: ctTeam,
       t: tTeam,
       score: [score[0], score[1]],
+      afterPistol: round === 2 || round === mr + 2,
       ...(prevTCall ? { prevTCall } : {}),
     });
     prevTCall = result.call;
@@ -118,7 +119,12 @@ export function simulateMatch(config: MatchConfig, seed: number): MatchLog {
           roundIncome({ won, side, reason: result.reason, planted: result.planted, alive, lossStreak: st.lossStreak }),
         );
         if (!alive) p.inv = freshInventory(side);
-        else p.inv = { ...p.inv, utils: [] };
+        else {
+          p.inv = { ...p.inv, utils: [] };
+          // Anchor set: paid for staying alive.
+          const surviveMoney = resolveBuild(p.base.build).surviveMoney;
+          if (surviveMoney) p.money = addMoney(p.money, surviveMoney);
+        }
 
         let dm = 0;
         if (!won) dm += MENTAL.LOSE_ROUND;
@@ -148,6 +154,7 @@ export function simulateMatch(config: MatchConfig, seed: number): MatchLog {
       if (s.clutchWon) a.clutchesWon++;
       if (s.planted) a.plants++;
       if (s.defused) a.defuses++;
+      for (const [id, n] of Object.entries(s.cardTriggers)) a.cardTriggers[id] = (a.cardTriggers[id] ?? 0) + n;
     }
 
     // ---- win / overtime
@@ -242,5 +249,6 @@ function emptyStats(id: string, team: 0 | 1): PlayerStats {
     rating: 0,
     adr: 0,
     kast: 0,
+    cardTriggers: {},
   };
 }

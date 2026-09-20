@@ -89,6 +89,8 @@ export interface DuelEvent extends Base {
   area: AreaId;
   range: 'short' | 'mid' | 'long';
   situation: DuelSituation;
+  /** Card / set effects that fired for each duelist (GDD 6). */
+  triggered?: Record<PlayerId, string[]>;
 }
 
 export interface DamageEvent extends Base {
@@ -239,6 +241,8 @@ export interface PlayerStats {
   rating: number;
   adr: number;
   kast: number;
+  /** How many times each card / set effect fired. */
+  cardTriggers: Record<string, number>;
 }
 
 export interface MatchLogTeam {

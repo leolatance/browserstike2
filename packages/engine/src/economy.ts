@@ -5,6 +5,7 @@
 import type { BuyType, RoundEndReason, Side } from './events';
 import { GEAR, riflesFor, smgFor, starterPistol, weapon, type UtilId, type Weapon } from './data/weapons';
 import type { PlayerClass } from './player';
+import type { Behavior } from './data/cards';
 import type { Rng } from './rng';
 
 export const START_MONEY = 800; // [v0]
@@ -136,6 +137,10 @@ export interface PurchaseInput {
   decision: BuyType;
   /** Another teammate already holds/bought an AWP this round. */
   teamHasAwp: boolean;
+  /** Behavioural cards (GDD 6.1). */
+  behaviors?: ReadonlySet<Behavior>;
+  /** Round right after a pistol round (Scout card). */
+  afterPistol?: boolean;
 }
 
 export interface Purchase {
@@ -147,12 +152,15 @@ export interface Purchase {
 
 export const RIFLE_RESERVE = 1000; // [v0] GDD 5.4: rifler keeps $1000
 export const AWP_MIN_MONEY = 5750; // [v0] GDD 5.4
+export const AWP_DISCOUNT = 500; // [v0] GDD 6.3 (AWPer set / card)
 
 const MAX_UTILS = 4;
 
 /** Decide what one player buys. Pure: returns the new inventory and spend. */
 export function buyForPlayer(input: PurchaseInput, rng: Rng): Purchase {
   const side = input.side;
+  const behaviors = input.behaviors ?? new Set<Behavior>();
+  const awpDiscount = behaviors.has('awp_discount') ? AWP_DISCOUNT : 0;
   const inv: Inventory = { ...input.inv, utils: [...input.inv.utils] };
   let money = input.money;
   let spent = 0;
@@ -164,9 +172,17 @@ export function buyForPlayer(input: PurchaseInput, rng: Rng): Purchase {
     return true;
   };
   const buyWeapon = (w: Weapon): boolean => {
-    if (!pay(w.price)) return false;
+    if (!pay(w.id === 'awp' ? w.price - awpDiscount : w.price)) return false;
     inv.weapon = w.id;
     return true;
+  };
+  /** Scout card: the round after a pistol, a Scout + kevlar if it fits. */
+  const tryScout = (): boolean => {
+    if (!behaviors.has('scout_round2') || !input.afterPistol || ownsRifle()) return false;
+    const scout = weapon('scout');
+    if (money < scout.price + GEAR.kevlar) return false;
+    buyArmor(false);
+    return buyWeapon(scout);
   };
   const buyArmor = (helmet: boolean): boolean => {
     if (inv.armor && (inv.helmet || !helmet)) return true;
@@ -234,7 +250,9 @@ export function buyForPlayer(input: PurchaseInput, rng: Rng): Purchase {
     }
     case 'force': {
       // Spend everything sensible: armor first, then the best gun that fits.
+      if (behaviors.has('always_kit')) buyKit();
       buyArmor(false);
+      tryScout();
       if (!ownsRifle()) {
         const rifle = bestRifleWithin(money);
         if (rifle) buyWeapon(rifle);
@@ -248,8 +266,11 @@ export function buyForPlayer(input: PurchaseInput, rng: Rng): Purchase {
     }
     case 'full': {
       const isSupport = input.class === 'support';
-      const wantsAwp = input.class === 'awper' && !input.teamHasAwp && money >= AWP_MIN_MONEY && weapon(inv.weapon).class !== 'awp';
-      if (wantsAwp) {
+      if (behaviors.has('always_kit')) buyKit();
+      const wantsAwp = input.class === 'awper' && !input.teamHasAwp && money >= AWP_MIN_MONEY - awpDiscount && weapon(inv.weapon).class !== 'awp';
+      if (tryScout()) {
+        buyArmor(true);
+      } else if (wantsAwp) {
         buyArmor(true);
         buyWeapon(weapon('awp'));
       } else if (isSupport) {

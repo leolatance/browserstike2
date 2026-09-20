@@ -9,7 +9,7 @@ import { addMoney, buyForPlayer, decideTeamBuy, type Inventory } from './economy
 import { weapon, type Weapon } from './data/weapons';
 import { headshotChance, resolveDuel, tradeChance, type DuelContext, type Duelist } from './duel';
 import { areaRange, shortestPath, type MapDef, type MapSite } from './map';
-import { effectiveAttrs, type Attrs, type Player, type PlayerClass } from './player';
+import { effectiveAttrs, resolveBuild, type Attrs, type Player, type PlayerClass, type ResolvedBuild } from './player';
 import type { Rng } from './rng';
 
 export const ROUND = {
@@ -119,6 +119,8 @@ export interface RoundParams {
   prevTCall?: TCall;
   /** Force buy types (balance tests). */
   forceBuy?: Partial<Record<Side, BuyType>>;
+  /** Round right after a pistol round (Scout card). */
+  afterPistol?: boolean;
 }
 
 export interface PlayerRoundStats {
@@ -137,6 +139,8 @@ export interface PlayerRoundStats {
   clutchAttempt: boolean;
   clutchWon: boolean;
   survived: boolean;
+  /** Card / set effects that fired this round. */
+  cardTriggers: Record<string, number>;
 }
 
 export interface RoundResult {
@@ -164,6 +168,8 @@ interface Live {
   side: Side;
   cls: PlayerClass;
   attrs: Attrs;
+  build: ResolvedBuild;
+  cardTriggers: Record<string, number>;
   hp: number;
   alive: boolean;
   area: AreaId;
@@ -237,6 +243,8 @@ export function simulateRound(params: RoundParams): RoundResult {
       side,
       cls: rp.base.class,
       attrs,
+      build: resolveBuild(rp.base.build),
+      cardTriggers: {},
       hp: 100,
       alive: true,
       area: map.spawns[side],
@@ -278,9 +286,11 @@ export function simulateRound(params: RoundParams): RoundResult {
 
   const decisionTatico = (side: Side): number => {
     const list = bySide[side];
+    // IGL set: the whole team decides better.
+    const setBonus = Math.max(0, ...list.map((l) => l.build.teamTatico));
     const igl = list.find((l) => l.cls === 'igl');
-    if (igl) return igl.attrs.tatico;
-    return list.reduce((s, l) => s + l.attrs.tatico, 0) / list.length;
+    if (igl) return Math.min(100, igl.attrs.tatico + setBonus);
+    return Math.min(100, list.reduce((s, l) => s + l.attrs.tatico, 0) / list.length + setBonus);
   };
 
   // ------------------------------------------------------------------ 1. Buy
@@ -320,7 +330,7 @@ export function simulateRound(params: RoundParams): RoundResult {
     let teamHasAwp = list.some((l) => l.rp.inv.weapon === 'awp');
     list.forEach((l, i) => {
       const purchase = buyForPlayer(
-        { side, money: l.rp.money, inv: l.rp.inv, class: l.cls, decision: buy[side], teamHasAwp },
+        { side, money: l.rp.money, inv: l.rp.inv, class: l.cls, decision: buy[side], teamHasAwp, behaviors: l.build.behaviors, afterPistol: params.afterPistol ?? false },
         rng,
       );
       l.rp.money = addMoney(l.rp.money, -purchase.spent);
@@ -441,6 +451,7 @@ export function simulateRound(params: RoundParams): RoundResult {
   // --------------------------------------------------- shared duel machinery
   let lastKillT = 0;
   let firstKillDone = false;
+  const lastDeath: Record<Side, number> = { CT: -Infinity, T: -Infinity };
   const alive = (side: Side) => bySide[side].filter((l) => l.alive);
 
   const duelist = (l: Live, clutch: boolean): Duelist => ({
@@ -449,7 +460,20 @@ export function simulateRound(params: RoundParams): RoundResult {
     armor: l.rp.inv.armor,
     hp: l.hp,
     clutch,
+    conditionals: l.build.conditionals,
+    siteSurvival: l.build.siteSurvival,
   });
+
+  /** Card behaviour 'Salva a arma': alone against 3+, retreat to spawn and keep the gun. */
+  const applySaves = (list: Live[], t: number) => {
+    for (const l of list) {
+      if (!l.alive || l.saving || !l.build.behaviors.has('save_1v3')) continue;
+      if (alive(l.side).length === 1 && alive(l.side === 'CT' ? 'T' : 'CT').length >= 3) {
+        l.saving = true;
+        move(l, map.spawns[l.side], t);
+      }
+    }
+  };
 
   const isClutch = (l: Live): boolean => alive(l.side).length === 1 && alive(l.side === 'CT' ? 'T' : 'CT').length >= 2;
   const markClutch = (l: Live) => {
@@ -472,6 +496,7 @@ export function simulateRound(params: RoundParams): RoundResult {
     emit({ type: 'kill', round, t, attacker: killer.rp.id, victim: victim.rp.id, weapon: w.id, headshot, area, duel, ...(trade ? { trade: true } : {}) });
     victim.alive = false;
     victim.hp = 0;
+    lastDeath[victim.side] = Math.max(lastDeath[victim.side], t);
     killer.kills++;
     if (headshot) killer.headshots++;
     killer.rp.money = addMoney(killer.rp.money, w.killReward);
@@ -490,7 +515,7 @@ export function simulateRound(params: RoundParams): RoundResult {
         emit({ type: 'assist', round, t, player: h.rp.id, victim: victim.rp.id });
       }
     }
-    if (victim.flashedBy && victim.flashedBy !== killer && victim.flashedBy.side === killer.side && rng.chance(ROUND.FLASH_ASSIST)) {
+    if (victim.flashedBy && victim.flashedBy !== killer && victim.flashedBy.side === killer.side && (victim.flashedBy.build.flashAssistSure || rng.chance(ROUND.FLASH_ASSIST))) {
       victim.flashedBy.flashAssists++;
       emit({ type: 'flashAssist', round, t, player: victim.flashedBy.rp.id, victim: victim.rp.id });
     }
@@ -566,12 +591,16 @@ export function simulateRound(params: RoundParams): RoundResult {
       useGrenades(o.presentA, o.presentD, t, o.area);
       useGrenades(o.presentD, o.presentA, t, o.area);
     }
+    const flagsA = { trade: t - lastDeath[a.side] <= 3, firstDuel: a.engagements === 0, pistol: params.pistol };
+    const flagsD = { firstDuel: d.engagements === 0, atSite: o.defenderHoldingAngle && o.retakeProT === null, pistol: params.pistol };
     a.engagements++;
     d.engagements++;
     markClutch(a);
     markClutch(d);
     const duelId = `r${round}d${++duelCounter}`;
     const ctx: DuelContext = {
+      attackerFlags: flagsA,
+      defenderFlags: flagsD,
       range: areaRange(map, o.area),
       defenderHoldingAngle: o.defenderHoldingAngle && !d.moved,
       inSmoke: false,
@@ -583,14 +612,14 @@ export function simulateRound(params: RoundParams): RoundResult {
     const aThrower = bestThrower(o.presentA);
     if (aThrower && rng.chance(ROUND.FLASH_USE)) {
       aThrower.flashes--;
-      ctx.defenderFlashedBy = aThrower.attrs.util;
+      ctx.defenderFlashedBy = Math.min(100, aThrower.attrs.util * aThrower.build.utilMult);
       d.flashedBy = aThrower;
       emit({ type: 'util', round, t: Math.max(0, t - 1), player: aThrower.rp.id, util: 'flash', area: o.area });
     }
     const dThrower = bestThrower(o.presentD);
     if (dThrower && rng.chance(ROUND.FLASH_USE)) {
       dThrower.flashes--;
-      ctx.attackerFlashedBy = dThrower.attrs.util;
+      ctx.attackerFlashedBy = Math.min(100, dThrower.attrs.util * dThrower.build.utilMult);
       a.flashedBy = dThrower;
       emit({ type: 'util', round, t: Math.max(0, t - 1), player: dThrower.rp.id, util: 'flash', area: o.area });
     }
@@ -627,6 +656,16 @@ export function simulateRound(params: RoundParams): RoundResult {
     const res = resolveDuel(duelist(a, clutchA), duelist(d, clutchD), ctx, rng);
     const winner = res.winner === 'A' ? a : d;
     const loser = res.winner === 'A' ? d : a;
+    if (res.triggered.A.length || res.triggered.D.length) {
+      const last = events[events.length - 1];
+      if (last && last.type === 'duel' && last.id === duelId) {
+        last.triggered = {};
+        if (res.triggered.A.length) last.triggered[a.rp.id] = res.triggered.A;
+        if (res.triggered.D.length) last.triggered[d.rp.id] = res.triggered.D;
+      }
+      for (const s of res.triggered.A) a.cardTriggers[s] = (a.cardTriggers[s] ?? 0) + 1;
+      for (const s of res.triggered.D) d.cardTriggers[s] = (d.cardTriggers[s] ?? 0) + 1;
+    }
 
     // Chip damage: the loser usually lands a few bullets first.
     if (winner.hp > 1 && rng.chance(ROUND.CHIP_CHANCE)) {
@@ -656,7 +695,7 @@ export function simulateRound(params: RoundParams): RoundResult {
     // Trade: the next present teammate of the loser re-peeks the winner.
     const mates = (loser === a ? o.presentA : o.presentD).filter((l) => l !== loser && l.alive && !l.retreated);
     const trader = orderBy(mates, loser.side === 'T' ? T_ATTACK_ORDER : DEFEND_ORDER)[0];
-    if (trader && rng.chance(tradeChance(trader.attrs.peek))) {
+    if (trader && (loser.build.guaranteedTrade || rng.chance(tradeChance(trader.attrs.peek)))) {
       const tt = t + rng.int(1, 3);
       kill(trader, winner, tt, o.area, true, rng.chance(headshotChance(trader.attrs.mira)), duelId);
       loser.traded = true;
@@ -778,6 +817,8 @@ export function simulateRound(params: RoundParams): RoundResult {
       break;
     }
 
+    applySaves(ts, t);
+    applySaves(cts, t);
     const pa = presentAttackers(t);
     const pd = presentDefenders(t);
 
@@ -868,7 +909,7 @@ export function simulateRound(params: RoundParams): RoundResult {
     const retakers = cts.filter((l) => l.alive && !l.saving);
     const regroupAt = retakers.length ? Math.min(Math.max(...retakers.map((l) => l.readyAt)), explodeAt - ROUND.RETAKE_LATEST) : plantT;
     const presentCT = (at: number) => (at < regroupAt ? [] : cts.filter((l) => l.alive && !l.saving && !l.retreated && l.readyAt <= at));
-    const presentT = (at: number) => ts.filter((l) => l.alive && !l.retreated && l.readyAt <= at);
+    const presentT = (at: number) => ts.filter((l) => l.alive && !l.saving && !l.retreated && l.readyAt <= at);
 
     t = Math.max(t, plantT + 2);
     let firstRetake = true;
@@ -899,6 +940,8 @@ export function simulateRound(params: RoundParams): RoundResult {
         break;
       }
 
+      applySaves(cts, t);
+      applySaves(ts, t);
       const pc = presentCT(t);
       const pt = presentT(t);
       if (pc.length === 0) {
@@ -981,6 +1024,7 @@ export function simulateRound(params: RoundParams): RoundResult {
       clutchAttempt: l.clutchAttempt,
       clutchWon,
       survived: l.alive,
+      cardTriggers: l.cardTriggers,
     };
   }
 

@@ -14,4 +14,5 @@ export { MENTAL, ctFor, simulateMatch } from './match';
 export type { MatchConfig } from './match';
 export * from './data/weapons';
 export { MAP01 } from './data/maps/map01';
+export * from './data/cards';
 export { BOT_NICKS, BOT_TEAM_NAMES } from './data/botnames';

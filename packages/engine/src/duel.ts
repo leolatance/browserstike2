@@ -4,7 +4,8 @@
  */
 import type { Range, Weapon } from './data/weapons';
 import { NO_ARMOR_PENALTY } from './data/weapons';
-import type { Attrs } from './player';
+import type { Attrs, CondEffect } from './player';
+import type { CardCondition } from './data/cards';
 import type { Rng } from './rng';
 
 export const DUEL = {
@@ -55,6 +56,20 @@ export interface Duelist {
   hp: number;
   /** This player is alone against ≥ 2 enemies. */
   clutch: boolean;
+  /** Situational card effects (GDD 6). */
+  conditionals?: CondEffect[];
+  /** Extra retreat chance when defending the site (Anchor set). */
+  siteSurvival?: number;
+}
+
+/** Per-duelist context the cards can read. */
+export interface DuelFlags {
+  /** Attacker is trading a teammate who died in the last 3s. */
+  trade?: boolean;
+  firstDuel?: boolean;
+  /** Defender standing on the site before the plant. */
+  atSite?: boolean;
+  pistol?: boolean;
 }
 
 export interface DuelContext {
@@ -69,6 +84,8 @@ export interface DuelContext {
   retakeProT: 'A' | 'D' | null;
   /** Side with more players in the fight, if any. */
   numbersAdvantage: 'A' | 'D' | null;
+  attackerFlags?: DuelFlags;
+  defenderFlags?: DuelFlags;
 }
 
 export interface DuelResult {
@@ -80,14 +97,51 @@ export interface DuelResult {
   loserSurvived: boolean;
   /** Damage dealt to the loser (equals loser HP when killed). */
   damage: number;
+  /** Card / set effects that fired. */
+  triggered: { A: string[]; D: string[] };
 }
 
-function attrPart(d: Duelist, role: 'A' | 'D'): number {
-  const a = d.attrs;
+export function conditionMatches(when: CardCondition, role: 'A' | 'D', d: Duelist, ctx: DuelContext): boolean {
+  const flags = (role === 'A' ? ctx.attackerFlags : ctx.defenderFlags) ?? {};
+  if (when.role && when.role !== (role === 'A' ? 'attacker' : 'defender')) return false;
+  if (when.holdingAngle && !(role === 'D' && ctx.defenderHoldingAngle)) return false;
+  if (when.flashed && (role === 'A' ? ctx.attackerFlashedBy : ctx.defenderFlashedBy) === undefined) return false;
+  if (when.clutch && !d.clutch) return false;
+  if (when.trade && !flags.trade) return false;
+  if (when.range && ctx.range !== when.range) return false;
+  if (when.retake && ctx.retakeProT !== (role === 'A' ? 'D' : 'A')) return false;
+  if (when.postplant && ctx.retakeProT !== role) return false;
+  if (when.pistol && !flags.pistol) return false;
+  if (when.numbers === 'up' && ctx.numbersAdvantage !== role) return false;
+  if (when.numbers === 'down' && ctx.numbersAdvantage !== (role === 'A' ? 'D' : 'A')) return false;
+  if (when.firstDuel && !flags.firstDuel) return false;
+  if (when.atSite && !flags.atSite) return false;
+  return true;
+}
+
+function attrPart(d: Duelist, role: 'A' | 'D', ctx: DuelContext, triggered: string[]): number {
+  let a = d.attrs;
+  let rawScore = 0;
+  if (d.conditionals && d.conditionals.length) {
+    let bonus: Partial<Attrs> | null = null;
+    for (const c of d.conditionals) {
+      if (!conditionMatches(c.when, role, d, ctx)) continue;
+      triggered.push(c.source);
+      if (c.attr === 'score') rawScore += c.value;
+      else {
+        bonus ??= {};
+        bonus[c.attr] = (bonus[c.attr] ?? 0) + c.value;
+      }
+    }
+    if (bonus) {
+      a = { ...a };
+      for (const k of Object.keys(bonus) as (keyof Attrs)[]) a[k] = Math.min(100, a[k] + (bonus[k] ?? 0));
+    }
+  }
   const positional = role === 'A' ? DUEL.W_PEEK * a.peek : DUEL.W_TATICO * (d.clutch ? a.mental : a.tatico);
   let score = DUEL.W_MIRA * a.mira + positional + DUEL.W_MOV * a.mov + DUEL.W_UTIL * a.util;
   if (d.clutch) score += DUEL.CLUTCH_MENTAL * a.mental;
-  return DUEL.ATTR_SCALE * score;
+  return DUEL.ATTR_SCALE * score + rawScore;
 }
 
 function commonPart(d: Duelist, ctx: DuelContext): number {
@@ -98,9 +152,10 @@ function commonPart(d: Duelist, ctx: DuelContext): number {
   return s;
 }
 
-export function duelScores(a: Duelist, d: Duelist, ctx: DuelContext): { scoreA: number; scoreD: number } {
-  let scoreA = attrPart(a, 'A') + commonPart(a, ctx);
-  let scoreD = attrPart(d, 'D') + commonPart(d, ctx);
+export function duelScores(a: Duelist, d: Duelist, ctx: DuelContext): { scoreA: number; scoreD: number; triggered: { A: string[]; D: string[] } } {
+  const triggered = { A: [] as string[], D: [] as string[] };
+  let scoreA = attrPart(a, 'A', ctx, triggered.A) + commonPart(a, ctx);
+  let scoreD = attrPart(d, 'D', ctx, triggered.D) + commonPart(d, ctx);
   if (ctx.defenderHoldingAngle) scoreD += DUEL.HOLD_ANGLE;
   if (ctx.attackerFlashedBy !== undefined) scoreA -= DUEL.FLASH_PENALTY * (ctx.attackerFlashedBy / 100);
   if (ctx.defenderFlashedBy !== undefined) scoreD -= DUEL.FLASH_PENALTY * (ctx.defenderFlashedBy / 100);
@@ -108,7 +163,7 @@ export function duelScores(a: Duelist, d: Duelist, ctx: DuelContext): { scoreA: 
   if (ctx.retakeProT === 'D') scoreD += DUEL.RETAKE_PRO_T;
   if (ctx.numbersAdvantage === 'A') scoreA += DUEL.NUMBERS;
   if (ctx.numbersAdvantage === 'D') scoreD += DUEL.NUMBERS;
-  return { scoreA, scoreD };
+  return { scoreA, scoreD, triggered };
 }
 
 /** P(A wins) from the two scores. */
@@ -130,7 +185,7 @@ export function tradeChance(nextAllyPeek: number): number {
 }
 
 export function resolveDuel(a: Duelist, d: Duelist, ctx: DuelContext, rng: Rng): DuelResult {
-  const { scoreA, scoreD } = duelScores(a, d, ctx);
+  const { scoreA, scoreD, triggered } = duelScores(a, d, ctx);
   const pWin = winProbability(scoreA, scoreD);
   const aWins = rng.chance(pWin);
   const winner = aWins ? a : d;
@@ -138,8 +193,10 @@ export function resolveDuel(a: Duelist, d: Duelist, ctx: DuelContext, rng: Rng):
 
   const headshot = rng.chance(headshotChance(winner.attrs.mira));
   const canRetreat = loser.hp > DUEL.RETREAT_MIN_HP;
-  const loserSurvived = canRetreat && rng.chance(retreatChance(loser.attrs.mov));
+  // Anchor set: better at escaping when defending the site.
+  const anchorBonus = loser === d && ctx.defenderFlags?.atSite ? (d.siteSurvival ?? 0) : 0;
+  const loserSurvived = canRetreat && rng.chance(retreatChance(loser.attrs.mov) + anchorBonus);
   const damage = loserSurvived ? Math.min(loser.hp - 1, rng.int(20, 70)) : loser.hp;
 
-  return { winner: aWins ? 'A' : 'D', pWin, headshot, loserSurvived, damage };
+  return { winner: aWins ? 'A' : 'D', pWin, headshot, loserSurvived, damage, triggered };
 }

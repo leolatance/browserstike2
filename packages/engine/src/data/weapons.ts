@@ -61,7 +61,8 @@ export const WEAPONS: readonly Weapon[] = [
   { id: 'm4s', name: 'M4 Supressor', class: 'rifle', price: 2900, killReward: KILL_REWARD.rifle, rangeMod: RIFLE_MOD, side: 'CT', tier: 6 },
   { id: 'm4', name: 'M4', class: 'rifle', price: 3100, killReward: KILL_REWARD.rifle, rangeMod: RIFLE_MOD, side: 'CT', tier: 6 },
 
-  // Sniper
+  // Snipers
+  { id: 'scout', name: 'Scout', class: 'awp', price: 1700, killReward: KILL_REWARD.rifle, rangeMod: { short: -8, mid: 0, long: 10 }, side: 'both', tier: 5 },
   { id: 'awp', name: 'AWP', class: 'awp', price: 4750, killReward: KILL_REWARD.awp, rangeMod: AWP_MOD, side: 'both', tier: 7 },
 ];
 

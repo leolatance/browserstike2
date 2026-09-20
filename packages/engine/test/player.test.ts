@@ -42,9 +42,10 @@ describe('player.effectiveAttrs', () => {
     expect(effectiveAttrs(base, { mental: 50, noIgl: true }).tatico).toBeCloseTo(70 * 0.85);
   });
 
-  it('build hook is typed but empty (identity)', () => {
-    const withCards = { ...base, build: { cards: ['some-card'] } };
-    expect(effectiveAttrs(withCards, { mental: 50 })).toEqual(effectiveAttrs(base, { mental: 50 }));
+  it('build hook: flat cards add, unknown cards throw', () => {
+    const withCards = { ...base, build: { cards: [{ id: 'card_peek_timing', level: 2 as const }] } };
+    expect(effectiveAttrs(withCards, { mental: 50 }).peek).toBe(base.attrs.peek + 26);
+    expect(() => effectiveAttrs({ ...base, build: { cards: [{ id: 'nope', level: 1 as const }] } }, { mental: 50 })).toThrow();
   });
 
   it('initialMental applies form clamped to 0.85–1.15', () => {
