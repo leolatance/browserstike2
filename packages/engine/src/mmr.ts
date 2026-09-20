@@ -1,5 +1,5 @@
 /**
- * MMR / patente (GDD 8.3): Elo K=25 with a performance damping, 10 tiers with
+ * MMR / patente (GDD 8.3): Elo K=25 damped by the match rating, 10 tiers with
  * original names, season soft reset. Pure functions shared by the client and
  * the edge function.
  */

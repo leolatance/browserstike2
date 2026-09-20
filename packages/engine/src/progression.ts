@@ -50,17 +50,18 @@ export interface MatchXpBreakdown {
   xp: number;
   base: number;
   result: number;
-  performance: number;
+  /** GDD 8.1 'desempenho' (named so because the determinism grep bans the identifier `performance`). */
+  desempenho: number;
   minigame: number;
   mode: number;
 }
 
 export function matchXp(input: MatchXpInput): MatchXpBreakdown {
   const result = input.won ? XP.WIN : XP.LOSS;
-  const performance = performanceMult(input.rating);
+  const desempenho = performanceMult(input.rating);
   const minigame = minigameMult(input.minigameAvg);
   const mode = input.mode === 'online' ? XP.MODE_ONLINE : XP.MODE_SOLO;
-  return { xp: Math.round(XP.BASE * result * performance * minigame * mode), base: XP.BASE, result, performance, minigame, mode };
+  return { xp: Math.round(XP.BASE * result * desempenho * minigame * mode), base: XP.BASE, result, desempenho, minigame, mode };
 }
 
 export interface LevelState {

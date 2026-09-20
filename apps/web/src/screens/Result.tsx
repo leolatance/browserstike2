@@ -172,7 +172,7 @@ export function Result() {
               <div className={`${styles.xp} mono`}>+{p.xp.xp} XP</div>
               {import.meta.env.DEV && (
                 <div className={ui.muted}>
-                  {p.xp.base} × resultado {p.xp.result.toFixed(1)} × desempenho {p.xp.performance.toFixed(2)} × minigame {p.xp.minigame.toFixed(2)} × modo solo
+                  {p.xp.base} × resultado {p.xp.result.toFixed(1)} × desempenho {p.xp.desempenho.toFixed(2)} × minigame {p.xp.minigame.toFixed(2)} × modo solo
                 </div>
               )}
               {p.reached.length > 0 ? (
