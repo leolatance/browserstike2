@@ -12,5 +12,8 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "dev": "npm run dev -w @idle-strike/web",
     "build": "npm run build --workspaces --if-present"
+  },
+  "devDependencies": {
+    "deno-bin": "^2.2.7"
   }
 }
