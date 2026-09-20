@@ -163,11 +163,13 @@ describe.concurrent('balance (GDD 5.8)', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Cards (GDD 6): a level-0 character with the best 2-slot build vs leveled bots
-// without cards → 52–58%; best 6 slots at level III → 65–75%. If a gate breaks,
-// tune the card numbers in data/cards.ts, never the duel coefficients.
+// Cards (GDD 6) — gates on the character's own rating, paired seeds: the same
+// match (same bots, same seed) is simulated with and without the build and the
+// rating difference is averaged. Pairing removes most of the match-to-match
+// noise, so n = 1000 is enough. Win rate is logged only as a diagnostic.
 // ---------------------------------------------------------------------------
 const CHAR_AVG = 26; // level-0 character (attrs rolled 22–30)
+const N_CARDS = 1000;
 
 function charMatch(seed: number, build: Build): MatchConfig {
   const rng = new Rng(seed);
@@ -179,58 +181,64 @@ function charMatch(seed: number, build: Build): MatchConfig {
   return { map: MAP01, teams: [a, b], startingCT: (seed % 2) as 0 | 1 };
 }
 
-async function winRate(build: Build, n: number, seedBase: number): Promise<number> {
-  const s = await runMany(n, (i) => ({ config: charMatch(seedBase + i, build), seed: seedBase + i }));
-  return s.filter((m) => m.winner === 0).length / s.length;
+const NO_BUILD: Build = { cards: [] };
+
+/** Mean rating gain of the character with `build` vs no cards, paired by seed. */
+async function ratingDelta(build: Build, n: number, seedBase: number): Promise<{ delta: number; win: number; winBase: number }> {
+  let delta = 0;
+  let win = 0;
+  let winBase = 0;
+  for (let i = 0; i < n; i++) {
+    const seed = seedBase + i;
+    const withLog = simulateMatch(charMatch(seed, build), seed);
+    const baseLog = simulateMatch(charMatch(seed, NO_BUILD), seed);
+    delta += withLog.stats.find((s) => s.id === 'a1')!.rating - baseLog.stats.find((s) => s.id === 'a1')!.rating;
+    if (withLog.winner === 0) win++;
+    if (baseLog.winner === 0) winBase++;
+  }
+  return { delta: delta / n, win: win / n, winBase: winBase / n };
 }
 
-/**
- * Win rate of every card alone at `level` (proxy to pick the best build).
- * Two stages: a cheap pass over all 30, then the top 8 re-measured with a
- * bigger sample so noise doesn't pick the winners.
- */
-async function rankCards(level: CardLevel, n: number, seedBase: number): Promise<{ id: string; win: number }[]> {
-  const first: { id: string; win: number }[] = [];
-  for (const c of CARDS) first.push({ id: c.id, win: await winRate({ cards: [{ id: c.id, level }] }, n, seedBase) });
-  first.sort((x, y) => y.win - x.win);
-  const finalists = first.slice(0, 8);
-  const out: { id: string; win: number }[] = [];
-  for (const f of finalists) out.push({ id: f.id, win: await winRate({ cards: [{ id: f.id, level }] }, n * 4, seedBase + 100_000) });
-  return out.sort((x, y) => y.win - x.win).concat(first.slice(8));
+/** Rating gain of every card alone at `level`; the top 8 are re-measured with 3× the sample. */
+async function rankCards(level: CardLevel, n: number, seedBase: number): Promise<{ id: string; delta: number }[]> {
+  const first: { id: string; delta: number }[] = [];
+  for (const c of CARDS) first.push({ id: c.id, delta: (await ratingDelta({ cards: [{ id: c.id, level }] }, n, seedBase)).delta });
+  first.sort((x, y) => y.delta - x.delta);
+  const out: { id: string; delta: number }[] = [];
+  for (const f of first.slice(0, 8)) out.push({ id: f.id, delta: (await ratingDelta({ cards: [{ id: f.id, level }] }, n * 3, seedBase + 100_000)).delta });
+  return out.sort((x, y) => y.delta - x.delta).concat(first.slice(8));
 }
 
-describe.concurrent('balance · cards (GDD 6)', () => {
-  it('level-0 character, best 2-slot build → 52–58% vs bots without cards', async () => {
-    const ranked = await rankCards(1, 400, 7000);
-    const top = ranked.slice(0, 5).map((r) => `${r.id} ${pct(r.win)}%`).join(' · ');
-    console.log(`[balance] single-card ranking (lvl I): ${top}`);
+const fmt = (x: number) => (x >= 0 ? '+' : '') + x.toFixed(3);
+
+describe.concurrent('balance · cards (GDD 6, rating gates)', () => {
+  it('best 2-slot build (lvl I) → character rating +0.08 to +0.15', async () => {
+    const ranked = await rankCards(1, 200, 7000);
+    console.log(`[balance] single-card rating gain (lvl I): ${ranked.slice(0, 6).map((r) => `${r.id} ${fmt(r.delta)}`).join(' · ')}`);
     const build: Build = { cards: ranked.slice(0, 2).map((r) => ({ id: r.id, level: 1 })) };
-    const win = await winRate(build, N, 8000);
-    console.log(`[balance] best 2 slots [${build.cards.map((c) => c.id).join(', ')}] wins ${pct(win)}%`);
-    expect(win).toBeGreaterThanOrEqual(0.52);
-    expect(win).toBeLessThanOrEqual(0.58);
+    const r = await ratingDelta(build, N_CARDS, 8000);
+    console.log(`[balance] best 2 slots [${build.cards.map((c) => c.id).join(', ')}] rating ${fmt(r.delta)} · win ${pct(r.win)}% vs ${pct(r.winBase)}% (diagnostic)`);
+    expect(r.delta).toBeGreaterThanOrEqual(0.08);
+    expect(r.delta).toBeLessThanOrEqual(0.15);
   });
 
-  it('best 6 slots at level III → 65–75%', async () => {
-    // Forward selection: each step adds the candidate that helps the current
-    // build most (measured in combination), so stacking one attribute past
-    // the 100 cap loses to spreading across attributes.
-    const ranked = await rankCards(3, 400, 7500);
+  it('best 6 slots at level III → character rating +0.30 to +0.45', async () => {
+    const ranked = await rankCards(3, 200, 7500);
     const candidates = ranked.slice(0, 12).map((r) => r.id);
     const picked: string[] = [];
     for (let step = 0; step < 6; step++) {
-      let best: { id: string; win: number } | null = null;
+      let best: { id: string; delta: number } | null = null;
       for (const id of candidates) {
         if (picked.includes(id)) continue;
-        const win = await winRate({ cards: [...picked, id].map((x) => ({ id: x, level: 3 })) }, 300, 7600 + step * 1000);
-        if (!best || win > best.win) best = { id, win };
+        const { delta } = await ratingDelta({ cards: [...picked, id].map((x) => ({ id: x, level: 3 })) }, 200, 7600 + step * 1000);
+        if (!best || delta > best.delta) best = { id, delta };
       }
       if (best) picked.push(best.id);
     }
     const build: Build = { cards: picked.map((id) => ({ id, level: 3 })) };
-    const win = await winRate(build, N, 9000);
-    console.log(`[balance] best 6 slots lvl III [${build.cards.map((c) => c.id).join(', ')}] class ${resolveBuild(build).activeClass} wins ${pct(win)}%`);
-    expect(win).toBeGreaterThanOrEqual(0.65);
-    expect(win).toBeLessThanOrEqual(0.75);
+    const r = await ratingDelta(build, N_CARDS, 9000);
+    console.log(`[balance] best 6 slots lvl III [${picked.join(', ')}] class ${resolveBuild(build).activeClass} rating ${fmt(r.delta)} · win ${pct(r.win)}% vs ${pct(r.winBase)}% (diagnostic)`);
+    expect(r.delta).toBeGreaterThanOrEqual(0.3);
+    expect(r.delta).toBeLessThanOrEqual(0.45);
   });
 });

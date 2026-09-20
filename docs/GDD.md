@@ -1,6 +1,6 @@
 # Idle Strike 2 — Game Design Document
 
-Versão 0.2 — 19/09/2026. Documento vivo. Números marcados com `[v0]` são valores iniciais de balanceamento e devem ser ajustados via simulação em massa. Números marcados com `[v1]` já passaram pelo `test/balance.test.ts` (5.000 partidas por cenário) e são os que estão no código.
+Versão 0.3 — 20/09/2026. Documento vivo. Números marcados com `[v0]` são valores iniciais de balanceamento e devem ser ajustados via simulação em massa. Números marcados com `[v1]` já passaram pelo `test/balance.test.ts` (5.000 partidas por cenário) e são os que estão no código.
 
 ---
 
@@ -80,7 +80,7 @@ Classe **não é atributo**: é *como o sim usa o boneco* — em quais duelos el
 Um time precisa de composição: sem IGL, `Tático` efetivo do time cai `[v0: −15%]`. Dois AWPers = só um compra.
 
 ### 3.4 Build efetiva
-`atributo_efetivo = base (barra) + Σ bônus planos das cartas + modificadores situacionais (cartas condicionais, forma, utilitária inimiga)`. Sempre clamp 0–100 no momento do duelo.
+`atributo_efetivo = base (barra) + Σ bônus planos das cartas + modificadores situacionais (cartas condicionais, forma, utilitária inimiga)`. `[v1]` **Sem clamp superior no duelo**: o teto 0–100 vale para a barra base (cap por nível) e para a exibição; cartas podem levar o atributo efetivo acima de 100 dentro do sim. Só o piso 0 é aplicado. Motivo: com o clamp, a terceira carta de um mesmo atributo era desperdício e o gate de 6 slots não fechava.
 
 ---
 
@@ -210,48 +210,93 @@ Rodar 5.000 partidas por cenário (`packages/engine/test/balance.test.ts`; relat
 - Distribuição de placares: 13–0 a 13–2 < 6% em times iguais.
 - Duração média 22–26 rounds.
 
+- `[v1]` **Cartas** (gates por rating do boneco, seeds pareadas: a mesma partida com e sem build, n = 1.000; boneco lvl 0 vs bots nivelados sem cartas):
+  - melhor build de 2 slots no nível I → rating do boneco **+0,08 a +0,15**;
+  - 6 melhores cartas no nível III → **+0,30 a +0,45**.
+  A vitória do time continua no relatório como diagnóstico, não como gate. Se sair da faixa, ajustar os números das cartas em `data/cards.ts`, nunca os coeficientes de duelo. A "melhor build" é encontrada pelo próprio teste (ranking individual em dois estágios e seleção progressiva por combinação).
+
+Resultado v1 cartas (20/09/2026): melhor dupla lvl I = Counter-strafe + Jiggle peek, rating **+0,094** (vitória 57,6% vs 49,2%); seis lvl III = Counter-strafe, Tap firing, Crosshair placement, Jiggle peek, Lineups, Timing de util, rating **+0,370** (vitória 72,4% vs 47,8%).
+
 Resultado v1 (19/09/2026): iguais 49,5% · +10 73,6% · pistol 77,6% · eco 17,6% · rating 1,000 / 0,312 · blowouts 2,5% · 22,38 rounds. Diagnóstico fora dos gates: CT vence ~50% dos rounds, plant em ~48%, fins por eliminação 57% / bomba 24% / tempo 13% / defuse 5%.
 
 ---
 
 ## 6. Cartas e build
 
+`[v1]` Implementado em `packages/engine/src/data/cards.ts` (dados) e `player.ts` (`resolveBuild`). Bots não usam cartas na Fase 1.
+
 ### 6.1 Tipos
-- **Plana**: +N num atributo (ex.: "Crosshair placement: +4 Mira"). Comum.
-- **Condicional**: modificador em situação (ex.: "Pré-mira de esquina: +8 Mira quando defensor segurando ângulo"). É onde a build fica interessante.
-- **Comportamental**: muda o que o sim faz (ex.: "Scout no pistol: compra Scout no round 2 se tiver $"; "Salva a arma: em 1v3+ recua em vez de duelar").
-- **Classe**: carrega tag de classe e conta pro conjunto.
+- **Plana**: +N num atributo. 13 cartas.
+- **Condicional**: +N num atributo quando a `situation` do duelo bate (segurando ângulo, flashado, clutch, trade, distância, retake, pós-plant, pistol, vantagem/desvantagem numérica, primeiro duelo do round, defendendo o site). 13 cartas.
+- **Comportamental**: muda o que o sim faz. 4 cartas: Scout no round 2, salvar em 1v3+, AWP −$500, kit sempre.
+- **Tag de classe** é independente do tipo: 21 das 30 cartas carregam tag, **3 por classe** (7 classes). Com 2 por classe um conjunto de 3 seria impossível, porque duplicata sobe nível em vez de virar segunda cópia.
 
-### 6.2 Raridade
-| Tier | Nome | Cor | Drop `[v0]` |
-|---|---|---|---|
-| 1 | Comum | cinza | 60% |
-| 2 | Incomum | azul | 25% |
-| 3 | Rara | roxo | 10% |
-| 4 | Épica | rosa | 4% |
-| 5 | Lendária | dourado | 1% |
+### 6.2 Raridade, drop e níveis
+| Tier | Nome | Drop | Cartas | Pó por cópia extra |
+|---|---|---|---|---|
+| 1 | Comum | 60% | 11 | 10 |
+| 2 | Incomum | 25% | 10 | 25 |
+| 3 | Rara | 10% | 5 | 60 |
+| 4 | Épica | 4% | 2 | 150 |
+| 5 | Lendária | 1% | 2 | 400 |
 
-Duplicata → nível da carta (I, II, III). Nível aumenta o número da carta (+4 → +5 → +6). Máximo III `[v0]`.
+Duplicata → nível da carta (I → II → III). O número escala **×1 / ×1,25 / ×1,5** (a razão +4 → +5 → +6 do v0). Cópia além do III vira **pó** (sem craft ainda).
 
-### 6.3 Slots e conjuntos
-- Slots por nível `[v0]`: lvl 0 → 2, lvl 5 → 3, lvl 12 → 4, lvl 20 → 5, lvl 35 → 6.
-- **Conjunto**: 3 cartas com a mesma tag de classe ativam a classe e seu bônus. Com 6 slots dá pra ter 2 conjuntos = classe híbrida (ex.: Entry + AWPer = "entry awper").
+**Números** `[v1]`: ~4,5× os exemplos do v0 (+4 virou +18). Com `k = 0,14` na fórmula de duelo um ponto de atributo vale ~0,06 de score, e um único boneco precisa mover o próprio rating numa 5x5; +4/+8 eram cosméticos (melhor dupla: +0,048 de rating; seis cartas III: +0,17). Movimentação vale mais por ponto que Mira porque sobreviver ao recuo pesa em rating.
+
+### 6.3 A tabela (30)
+| id | nome | raridade | tipo | tag | I / II / III | efeito (nível I) |
+|---|---|---|---|---|---|---|
+| `card_aim_crosshair` | Crosshair placement | Comum | plana | Rifler | +18 / +22 / +27 | +18 Mira |
+| `card_aim_spray` | Controle de spray | Incomum | plana | Rifler | +18 / +22 / +27 | +18 Mira |
+| `card_aim_tap` | Tap firing | Épica | plana | Star | +22 / +28 / +33 | +22 Mira |
+| `card_move_strafe` | Counter-strafe | Comum | plana | AWPer | +20 / +25 / +30 | +20 Movimentação |
+| `card_move_jiggle` | Jiggle peek | Comum | plana | Entry | +20 / +25 / +30 | +20 Movimentação |
+| `card_peek_timing` | Timing de peek | Comum | plana | — | +18 / +22 / +27 | +18 Peek |
+| `card_peek_wide` | Wide swing | Incomum | plana | Entry | +18 / +22 / +27 | +18 Peek |
+| `card_tac_positioning` | Posicionamento | Comum | plana | Âncora | +18 / +22 / +27 | +18 Tático |
+| `card_tac_reading` | Leitura de jogo | Incomum | plana | IGL | +18 / +22 / +27 | +18 Tático |
+| `card_util_lineups` | Lineups | Comum | plana | Support | +18 / +22 / +27 | +18 Utilitária |
+| `card_util_timing` | Timing de util | Incomum | plana | Support | +18 / +22 / +27 | +18 Utilitária |
+| `card_mental_focus` | Foco | Comum | plana | Star | +18 / +22 / +27 | +18 Mental |
+| `card_mental_calm` | Sangue frio | Incomum | plana | Âncora | +18 / +22 / +27 | +18 Mental |
+| `card_cond_prefire` | Pré-mira de esquina | Rara | condicional | — | +36 / +45 / +54 | +36 Mira quando defende segurando ângulo |
+| `card_cond_first_contact` | Primeiro contato | Rara | condicional | Entry | +36 / +45 / +54 | +36 Peek no primeiro duelo do round atacando |
+| `card_cond_flash_eyes` | Olhos fechados | Incomum | condicional | Support | +36 / +45 / +54 | +36 Mira quando flashado |
+| `card_cond_clutch_nerves` | Nervos de aço | Lendária | condicional | — | +45 / +56 / +68 | +45 Mental em clutch |
+| `card_cond_trade_instinct` | Instinto de trade | Incomum | condicional | — | +36 / +45 / +54 | +36 Peek ao tradar um aliado |
+| `card_cond_long_range` | Olho de águia | Incomum | condicional | AWPer | +27 / +34 / +40 | +27 Mira em longa distância |
+| `card_cond_short_range` | Cão de briga | Comum | condicional | Rifler | +27 / +34 / +40 | +27 Mira em curta distância |
+| `card_cond_retake_calm` | Retake frio | Rara | condicional | IGL | +36 / +45 / +54 | +36 Tático em retake |
+| `card_cond_postplant` | Pós-plant | Incomum | condicional | — | +36 / +45 / +54 | +36 Tático defendendo a bomba plantada |
+| `card_cond_pistol_hero` | Herói do pistol | Comum | condicional | — | +36 / +45 / +54 | +36 Mira no pistol round |
+| `card_cond_numbers_down` | Contra a maré | Rara | condicional | — | +45 / +56 / +68 | +45 Mental em desvantagem numérica |
+| `card_cond_site_anchor` | Dono do site | Épica | condicional | Âncora | +36 / +45 / +54 | +36 Tático defendendo o site |
+| `card_cond_star_pick` | Escolha do craque | Lendária | condicional | Star | +45 / +56 / +68 | +45 Mira em vantagem numérica |
+| `card_beh_scout` | Scout no pistol | Incomum | comportamental | AWPer | — | Compra Scout no round 2 se tiver dinheiro |
+| `card_beh_save` | Salva a arma | Comum | comportamental | — | — | Em 1v3 ou pior, recua e salva em vez de duelar |
+| `card_beh_awp_discount` | Desconto na AWP | Rara | comportamental | — | — | AWP custa −$500 |
+| `card_beh_kit` | Kit sempre | Comum | comportamental | IGL | — | Como CT, compra kit antes de tudo |
+
+### 6.4 Slots e conjuntos
+- Slots por nível: lvl 0 → 2, lvl 5 → 3, lvl 12 → 4, lvl 20 → 5, lvl 35 → 6.
+- **Conjunto**: 3 cartas distintas com a mesma tag ativam a classe e o bônus. Dois conjuntos = híbrido: a primeira tag equipada é a classe que o sim joga, os dois bônus valem.
 - Sem conjunto → Rifler.
 
-Bônus de conjunto `[v0]`:
-| Classe | Bônus (3 cartas) |
+Bônus de conjunto `[v1]` (como está no código):
+| Classe | Bônus |
 |---|---|
-| Entry | primeiro duelo do round: +10 Peek; trade garantido em 3s se morrer |
+| Entry | +10 Peek no primeiro duelo do round atacando; trade garantido em 3s se morrer |
 | IGL | time ganha +8 Tático nas decisões de compra e call |
-| AWPer | AWP custa −$500; +6 Mira em long |
-| Âncora | +12 sobrevivência em site; +$ por round sobrevivido |
-| Support | util do time +15% efetiva; +1 assist por round como média |
-| Star | pode escolher o duelo mais favorável 1x por round |
+| AWPer | AWP custa −$500; +6 Mira em longa |
+| Âncora | +12% de chance de escapar defendendo o site; +$200 por round sobrevivido |
+| Support | util do time ×1,15 no cálculo da flash; flash assist sempre creditado |
+| Star | +6 de score no primeiro duelo do round (a "escolha do duelo favorável") |
 
-### 6.4 Box inicial
-5 cartas comuns (2 planas, 1 condicional, 2 de classe aleatória), 1 skin comum de rifle, 1 skin comum de pistola, 1 avatar.
-
----
+### 6.5 Boxes
+- **Box inicial** (onboarding): 5 comuns — 2 planas, 1 condicional, 2 com tag de classe. Rolada pela seed do nick.
+- **Box de partida** (queue solo): **2 cartas** por partida, tier pela tabela acima, rolada pela seed da partida. Com 2 cartas o primeiro conjunto de 3 fecha em média em **9 partidas** (p50 9, p75 12, p90 16); com 3 cartas cairia para 6.
+- O log da partida conta quantas vezes cada carta/conjunto disparou (`PlayerStats.cardTriggers`), e a tela de resultado mostra.
 
 ## 7. Cosméticos
 

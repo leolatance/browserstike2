@@ -135,7 +135,7 @@ function attrPart(d: Duelist, role: 'A' | 'D', ctx: DuelContext, triggered: stri
     }
     if (bonus) {
       a = { ...a };
-      for (const k of Object.keys(bonus) as (keyof Attrs)[]) a[k] = Math.min(100, a[k] + (bonus[k] ?? 0));
+      for (const k of Object.keys(bonus) as (keyof Attrs)[]) a[k] = a[k] + (bonus[k] ?? 0);
     }
   }
   const positional = role === 'A' ? DUEL.W_PEEK * a.peek : DUEL.W_TATICO * (d.clutch ? a.mental : a.tatico);

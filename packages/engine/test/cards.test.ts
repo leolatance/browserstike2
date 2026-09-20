@@ -33,8 +33,8 @@ describe('cards data (GDD 6)', () => {
 
   it('levels scale ×1 / ×1.25 / ×1.5 (the GDD +4 → +5 → +6 ratio) and the text follows', () => {
     const c = card('card_aim_crosshair');
-    expect([1, 2, 3].map((l) => cardValue(c, l as 1 | 2 | 3))).toEqual([20, 26, 35]);
-    expect(cardText(c, 3)).toBe('+35 Mira');
+    expect([1, 2, 3].map((l) => cardValue(c, l as 1 | 2 | 3))).toEqual([18, 23, 27]);
+    expect(cardText(c, 3)).toBe('+27 Mira');
     expect(cardValue(card('card_beh_save'), 3)).toBe(0);
   });
 
@@ -47,17 +47,17 @@ describe('build resolution', () => {
   const eq = (id: string, level: 1 | 2 | 3 = 1) => ({ id, level });
 
   it('flat cards add to effective attributes', () => {
-    const p = makePlayer('p', 'p', 'rifler', uniformAttrs(30));
+    const p = makePlayer('p', 'p', 'rifler', uniformAttrs(50));
     p.build = { cards: [eq('card_aim_crosshair'), eq('card_aim_spray', 3)] };
     const e = effectiveAttrs(p, { mental: 50 });
-    expect(e.mira).toBe(30 + 20 + 35);
-    expect(e.mov).toBe(30);
+    expect(e.mira).toBe(50 + cardValue(card('card_aim_crosshair'), 1) + cardValue(card('card_aim_spray'), 3));
+    expect(e.mov).toBe(50);
   });
 
   it('duplicates do not stack; 3 same-tag cards activate the class', () => {
     const b: Build = { cards: [eq('card_aim_crosshair'), eq('card_aim_crosshair'), eq('card_aim_spray'), eq('card_cond_short_range')] };
     const r = resolveBuild(b);
-    expect(r.flat.mira).toBe(40);
+    expect(r.flat.mira).toBe(36);
     expect(r.sets).toEqual(['rifler']);
     expect(r.activeClass).toBe('rifler');
     expect(setProgress(b)).toEqual({ rifler: 3 });
@@ -95,7 +95,7 @@ describe('conditional cards in duels', () => {
     expect(off.scoreD).toBeCloseTo(base);
     expect(off.triggered.D).toEqual([]);
     const on = duelScores(duelist(), duelist({ conditionals: prefire }), ctx({ defenderHoldingAngle: true }));
-    expect(on.scoreD).toBeCloseTo(base + DUEL.HOLD_ANGLE + DUEL.ATTR_SCALE * DUEL.W_MIRA * 38);
+    expect(on.scoreD).toBeCloseTo(base + DUEL.HOLD_ANGLE + DUEL.ATTR_SCALE * DUEL.W_MIRA * 36);
     expect(on.triggered.D).toEqual(['card_cond_prefire']);
     // Role-gated: the same card on the attacker never fires.
     expect(duelScores(duelist({ conditionals: prefire }), duelist(), ctx({ defenderHoldingAngle: true })).triggered.A).toEqual([]);

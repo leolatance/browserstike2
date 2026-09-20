@@ -231,11 +231,13 @@ export function effectiveAttrs(player: Player, situation: Situation = {}): Attrs
     mental,
   };
   if (situation.noIgl) out.tatico *= NO_IGL_TATICO_MULT;
-  out.mira = clampAttr(out.mira);
-  out.mov = clampAttr(out.mov);
-  out.peek = clampAttr(out.peek);
-  out.tatico = clampAttr(out.tatico);
-  out.util = clampAttr(out.util);
+  // [v1] No upper clamp in the simulation: cards can push past 100. The 0–100
+  // cap applies to the character's base attributes and to the display only.
+  out.mira = Math.max(0, out.mira);
+  out.mov = Math.max(0, out.mov);
+  out.peek = Math.max(0, out.peek);
+  out.tatico = Math.max(0, out.tatico);
+  out.util = Math.max(0, out.util);
   return out;
 }
 

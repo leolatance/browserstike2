@@ -29,10 +29,10 @@ describe('player.effectiveAttrs', () => {
     expect(high.mira).toBeCloseTo(66);
   });
 
-  it('clamps to 0–100', () => {
+  it('floors at 0; no upper clamp in the sim (100 is a display cap)', () => {
     const god = makePlayer('g', 'god', 'star', uniformAttrs(100));
     const e = effectiveAttrs(god, { mental: 100 });
-    expect(e.mira).toBe(100);
+    expect(e.mira).toBeCloseTo(110);
     const neg = makePlayer('n', 'neg', 'star', uniformAttrs(-20));
     expect(effectiveAttrs(neg, { mental: 150 }).mira).toBe(0);
     expect(effectiveAttrs(neg, { mental: 150 }).mental).toBe(100);
@@ -44,7 +44,7 @@ describe('player.effectiveAttrs', () => {
 
   it('build hook: flat cards add, unknown cards throw', () => {
     const withCards = { ...base, build: { cards: [{ id: 'card_peek_timing', level: 2 as const }] } };
-    expect(effectiveAttrs(withCards, { mental: 50 }).peek).toBe(base.attrs.peek + 26);
+    expect(effectiveAttrs(withCards, { mental: 50 }).peek).toBe(base.attrs.peek + 23);
     expect(() => effectiveAttrs({ ...base, build: { cards: [{ id: 'nope', level: 1 as const }] } }, { mental: 50 })).toThrow();
   });
 

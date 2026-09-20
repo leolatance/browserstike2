@@ -1,9 +1,7 @@
 /**
  * Cards (GDD 6). Pure data: ids match the art prompts (card_<theme>_<name>).
- * Level I/II/III scales the number ×1 / ×1.3 / ×1.75 [v1] (GDD said +4 → +5 → +6;
- * level III was widened so six maxed cards reach the 65–75% gate).
- * [v1] Numbers are ~5× the GDD examples: with k = 0.14 in the duel formula one
- * attribute point is worth ~0.06 score, and a single player must move a 5v5.
+ * Level I/II/III scales the number ×1 / ×1.25 / ×1.5 (the GDD's +4 → +5 → +6 ratio).
+ * [v1] Numbers are tuned by the paired-rating gates in test/balance.test.ts.
  */
 import type { Range } from './weapons';
 import type { AttrKey, PlayerClass } from '../player';
@@ -62,33 +60,33 @@ const beh = (behavior: Behavior): CardEffect => ({ kind: 'behavior', behavior })
 // Tags: 3 per class (a set needs 3 distinct cards, duplicates level up instead of stacking).
 export const CARDS: readonly Card[] = [
   // ------------------------------------------------------------- planas (13)
-  { id: 'card_aim_crosshair', name: 'Crosshair placement', rarity: 1, type: 'flat', theme: 'aim', tag: 'rifler', effect: flat('mira', 20), text: '+{n} Mira' },
-  { id: 'card_aim_spray', name: 'Controle de spray', rarity: 2, type: 'flat', theme: 'aim', tag: 'rifler', effect: flat('mira', 20), text: '+{n} Mira' },
+  { id: 'card_aim_crosshair', name: 'Crosshair placement', rarity: 1, type: 'flat', theme: 'aim', tag: 'rifler', effect: flat('mira', 18), text: '+{n} Mira' },
+  { id: 'card_aim_spray', name: 'Controle de spray', rarity: 2, type: 'flat', theme: 'aim', tag: 'rifler', effect: flat('mira', 18), text: '+{n} Mira' },
   { id: 'card_aim_tap', name: 'Tap firing', rarity: 4, type: 'flat', theme: 'aim', tag: 'star', effect: flat('mira', 22), text: '+{n} Mira' },
-  { id: 'card_move_strafe', name: 'Counter-strafe', rarity: 1, type: 'flat', theme: 'move', tag: 'awper', effect: flat('mov', 12), text: '+{n} Movimentação' },
-  { id: 'card_move_jiggle', name: 'Jiggle peek', rarity: 1, type: 'flat', theme: 'move', tag: 'entry', effect: flat('mov', 12), text: '+{n} Movimentação' },
-  { id: 'card_peek_timing', name: 'Timing de peek', rarity: 1, type: 'flat', theme: 'peek', effect: flat('peek', 20), text: '+{n} Peek' },
-  { id: 'card_peek_wide', name: 'Wide swing', rarity: 2, type: 'flat', theme: 'peek', tag: 'entry', effect: flat('peek', 20), text: '+{n} Peek' },
-  { id: 'card_tac_positioning', name: 'Posicionamento', rarity: 1, type: 'flat', theme: 'tac', tag: 'anchor', effect: flat('tatico', 20), text: '+{n} Tático' },
-  { id: 'card_tac_reading', name: 'Leitura de jogo', rarity: 2, type: 'flat', theme: 'tac', tag: 'igl', effect: flat('tatico', 20), text: '+{n} Tático' },
-  { id: 'card_util_lineups', name: 'Lineups', rarity: 1, type: 'flat', theme: 'util', tag: 'support', effect: flat('util', 20), text: '+{n} Utilitária' },
-  { id: 'card_util_timing', name: 'Timing de util', rarity: 2, type: 'flat', theme: 'util', tag: 'support', effect: flat('util', 20), text: '+{n} Utilitária' },
-  { id: 'card_mental_focus', name: 'Foco', rarity: 1, type: 'flat', theme: 'mental', tag: 'star', effect: flat('mental', 22), text: '+{n} Mental' },
-  { id: 'card_mental_calm', name: 'Sangue frio', rarity: 2, type: 'flat', theme: 'mental', tag: 'anchor', effect: flat('mental', 22), text: '+{n} Mental' },
+  { id: 'card_move_strafe', name: 'Counter-strafe', rarity: 1, type: 'flat', theme: 'move', tag: 'awper', effect: flat('mov', 20), text: '+{n} Movimentação' },
+  { id: 'card_move_jiggle', name: 'Jiggle peek', rarity: 1, type: 'flat', theme: 'move', tag: 'entry', effect: flat('mov', 20), text: '+{n} Movimentação' },
+  { id: 'card_peek_timing', name: 'Timing de peek', rarity: 1, type: 'flat', theme: 'peek', effect: flat('peek', 18), text: '+{n} Peek' },
+  { id: 'card_peek_wide', name: 'Wide swing', rarity: 2, type: 'flat', theme: 'peek', tag: 'entry', effect: flat('peek', 18), text: '+{n} Peek' },
+  { id: 'card_tac_positioning', name: 'Posicionamento', rarity: 1, type: 'flat', theme: 'tac', tag: 'anchor', effect: flat('tatico', 18), text: '+{n} Tático' },
+  { id: 'card_tac_reading', name: 'Leitura de jogo', rarity: 2, type: 'flat', theme: 'tac', tag: 'igl', effect: flat('tatico', 18), text: '+{n} Tático' },
+  { id: 'card_util_lineups', name: 'Lineups', rarity: 1, type: 'flat', theme: 'util', tag: 'support', effect: flat('util', 18), text: '+{n} Utilitária' },
+  { id: 'card_util_timing', name: 'Timing de util', rarity: 2, type: 'flat', theme: 'util', tag: 'support', effect: flat('util', 18), text: '+{n} Utilitária' },
+  { id: 'card_mental_focus', name: 'Foco', rarity: 1, type: 'flat', theme: 'mental', tag: 'star', effect: flat('mental', 18), text: '+{n} Mental' },
+  { id: 'card_mental_calm', name: 'Sangue frio', rarity: 2, type: 'flat', theme: 'mental', tag: 'anchor', effect: flat('mental', 18), text: '+{n} Mental' },
 
   // ------------------------------------------------------- condicionais (13)
-  { id: 'card_cond_prefire', name: 'Pré-mira de esquina', rarity: 3, type: 'conditional', theme: 'aim', effect: cond('mira', 38, { role: 'defender', holdingAngle: true }), text: '+{n} Mira quando defende segurando ângulo' },
-  { id: 'card_cond_first_contact', name: 'Primeiro contato', rarity: 3, type: 'conditional', theme: 'peek', tag: 'entry', effect: cond('peek', 38, { role: 'attacker', firstDuel: true }), text: '+{n} Peek no primeiro duelo do round atacando' },
-  { id: 'card_cond_flash_eyes', name: 'Olhos fechados', rarity: 2, type: 'conditional', theme: 'util', tag: 'support', effect: cond('mira', 38, { flashed: true }), text: '+{n} Mira quando flashado' },
-  { id: 'card_cond_clutch_nerves', name: 'Nervos de aço', rarity: 5, type: 'conditional', theme: 'mental', effect: cond('mental', 50, { clutch: true }), text: '+{n} Mental em clutch' },
-  { id: 'card_cond_trade_instinct', name: 'Instinto de trade', rarity: 2, type: 'conditional', theme: 'peek', effect: cond('peek', 38, { role: 'attacker', trade: true }), text: '+{n} Peek ao tradar um aliado' },
-  { id: 'card_cond_long_range', name: 'Olho de águia', rarity: 2, type: 'conditional', theme: 'aim', tag: 'awper', effect: cond('mira', 25, { range: 'long' }), text: '+{n} Mira em longa distância' },
-  { id: 'card_cond_short_range', name: 'Cão de briga', rarity: 1, type: 'conditional', theme: 'aim', tag: 'rifler', effect: cond('mira', 25, { range: 'short' }), text: '+{n} Mira em curta distância' },
-  { id: 'card_cond_retake_calm', name: 'Retake frio', rarity: 3, type: 'conditional', theme: 'tac', tag: 'igl', effect: cond('tatico', 38, { retake: true }), text: '+{n} Tático em retake' },
-  { id: 'card_cond_postplant', name: 'Pós-plant', rarity: 2, type: 'conditional', theme: 'tac', effect: cond('tatico', 38, { postplant: true }), text: '+{n} Tático defendendo a bomba plantada' },
-  { id: 'card_cond_pistol_hero', name: 'Herói do pistol', rarity: 1, type: 'conditional', theme: 'aim', effect: cond('mira', 38, { pistol: true }), text: '+{n} Mira no pistol round' },
-  { id: 'card_cond_numbers_down', name: 'Contra a maré', rarity: 3, type: 'conditional', theme: 'mental', effect: cond('mental', 50, { numbers: 'down' }), text: '+{n} Mental em desvantagem numérica' },
-  { id: 'card_cond_site_anchor', name: 'Dono do site', rarity: 4, type: 'conditional', theme: 'tac', tag: 'anchor', effect: cond('tatico', 38, { role: 'defender', atSite: true }), text: '+{n} Tático defendendo o site' },
+  { id: 'card_cond_prefire', name: 'Pré-mira de esquina', rarity: 3, type: 'conditional', theme: 'aim', effect: cond('mira', 36, { role: 'defender', holdingAngle: true }), text: '+{n} Mira quando defende segurando ângulo' },
+  { id: 'card_cond_first_contact', name: 'Primeiro contato', rarity: 3, type: 'conditional', theme: 'peek', tag: 'entry', effect: cond('peek', 36, { role: 'attacker', firstDuel: true }), text: '+{n} Peek no primeiro duelo do round atacando' },
+  { id: 'card_cond_flash_eyes', name: 'Olhos fechados', rarity: 2, type: 'conditional', theme: 'util', tag: 'support', effect: cond('mira', 36, { flashed: true }), text: '+{n} Mira quando flashado' },
+  { id: 'card_cond_clutch_nerves', name: 'Nervos de aço', rarity: 5, type: 'conditional', theme: 'mental', effect: cond('mental', 45, { clutch: true }), text: '+{n} Mental em clutch' },
+  { id: 'card_cond_trade_instinct', name: 'Instinto de trade', rarity: 2, type: 'conditional', theme: 'peek', effect: cond('peek', 36, { role: 'attacker', trade: true }), text: '+{n} Peek ao tradar um aliado' },
+  { id: 'card_cond_long_range', name: 'Olho de águia', rarity: 2, type: 'conditional', theme: 'aim', tag: 'awper', effect: cond('mira', 27, { range: 'long' }), text: '+{n} Mira em longa distância' },
+  { id: 'card_cond_short_range', name: 'Cão de briga', rarity: 1, type: 'conditional', theme: 'aim', tag: 'rifler', effect: cond('mira', 27, { range: 'short' }), text: '+{n} Mira em curta distância' },
+  { id: 'card_cond_retake_calm', name: 'Retake frio', rarity: 3, type: 'conditional', theme: 'tac', tag: 'igl', effect: cond('tatico', 36, { retake: true }), text: '+{n} Tático em retake' },
+  { id: 'card_cond_postplant', name: 'Pós-plant', rarity: 2, type: 'conditional', theme: 'tac', effect: cond('tatico', 36, { postplant: true }), text: '+{n} Tático defendendo a bomba plantada' },
+  { id: 'card_cond_pistol_hero', name: 'Herói do pistol', rarity: 1, type: 'conditional', theme: 'aim', effect: cond('mira', 36, { pistol: true }), text: '+{n} Mira no pistol round' },
+  { id: 'card_cond_numbers_down', name: 'Contra a maré', rarity: 3, type: 'conditional', theme: 'mental', effect: cond('mental', 45, { numbers: 'down' }), text: '+{n} Mental em desvantagem numérica' },
+  { id: 'card_cond_site_anchor', name: 'Dono do site', rarity: 4, type: 'conditional', theme: 'tac', tag: 'anchor', effect: cond('tatico', 36, { role: 'defender', atSite: true }), text: '+{n} Tático defendendo o site' },
   { id: 'card_cond_star_pick', name: 'Escolha do craque', rarity: 5, type: 'conditional', theme: 'aim', tag: 'star', effect: cond('mira', 45, { numbers: 'up' }), text: '+{n} Mira em vantagem numérica' },
 
   // -------------------------------------------------------- comportamentais (4)
@@ -110,7 +108,7 @@ export function hasCard(id: string): boolean {
   return id in BY_ID;
 }
 
-export const LEVEL_MULT: Record<CardLevel, number> = { 1: 1, 2: 1.3, 3: 1.75 }; // [v1]
+export const LEVEL_MULT: Record<CardLevel, number> = { 1: 1, 2: 1.25, 3: 1.5 }; // GDD 6.2 ratio
 
 /** Level scaling (see LEVEL_MULT). Behaviours don't scale. */
 export function cardValue(c: Card, level: CardLevel): number {
