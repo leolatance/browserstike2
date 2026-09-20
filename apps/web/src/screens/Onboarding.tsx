@@ -51,7 +51,6 @@ export function Onboarding() {
 
   return (
     <div className={ui.page}>
-      <h1 className={ui.h1}>Crie seu boneco</h1>
 
       <section className={ui.card}>
         <label className={ui.h2} htmlFor="nick">

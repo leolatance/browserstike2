@@ -18,6 +18,15 @@ import { SyncBoot } from './store/SyncBoot';
 import { QueueOnline } from './screens/QueueOnline';
 import { ResultOnline } from './screens/ResultOnline';
 import { Ranking } from './screens/Ranking';
+import { Landing } from './screens/Landing';
+
+/** '/': lobby with a character, landing without one. */
+function HomeGate() {
+  const { data, loading } = useQuery(getCharacter);
+  if (loading) return null;
+  if (data) return <Navigate to="/lobby" replace />;
+  return <Landing />;
+}
 
 /** Redirects to onboarding until a character exists. */
 function RequireCharacter({ children }: { children: ReactNode }) {
@@ -42,7 +51,7 @@ export function App() {
     <BrowserRouter>
       <SyncBoot />
       <Routes>
-        <Route path="/" element={<Navigate to="/lobby" replace />} />
+        <Route path="/" element={<HomeGate />} />
         <Route path="/onboarding" element={<OnboardingGate />} />
         <Route
           path="/lobby"
