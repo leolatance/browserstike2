@@ -29,6 +29,7 @@ import { getSetting, setSetting } from '../store/settings';
 import { colorScheme, type ViewMode } from '../match/colors';
 import { colorFromNick, type PlayerColor } from '../store/db';
 import { Avatar } from '../ui/Avatar';
+import { classWithSetLabel } from '../store/buildLabel';
 import { DuelTargetPanel } from '../minigames/DuelTargetPanel';
 import styles from './MatchScreen.module.css';
 
@@ -310,6 +311,7 @@ function MatchView({ source }: { source: MatchSource }) {
           teamNames={teamNames}
           highlight={MY_PLAYER}
           colorOf={scheme.of}
+          myClassLabel={source.kind !== 'dev' ? classWithSetLabel(source.config.teams[source.myTeam].players.find((p) => p.id === MY_PLAYER)?.build ?? { cards: [] }) : undefined}
           avatar={source.kind !== 'dev' && profile ? <span style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: 6 }}><Avatar photo={profile.photo} nick={profile.nick} size={18} /></span> : undefined}
         />
       </div>

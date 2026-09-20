@@ -4,6 +4,7 @@ import { BOT_TEAM_NAMES, MAP01, Rng, averageAttr, generateBotTeam, makePlayer, t
 import { getCharacter } from '../store/character';
 import { currentBuild } from '../store/cards';
 import { resolveBuild } from '@idle-strike/engine';
+import { classWithSetLabel } from '../store/buildLabel';
 import { career, formMultiplier } from '../store/matches';
 import { setPendingMatch } from '../store/pending';
 import { Shell } from '../ui/Shell';
@@ -26,7 +27,7 @@ const CLASS_LABEL: Record<PlayerClass, string> = {
 
 export function Queue() {
   const nav = useNavigate();
-  const [preview, setPreview] = useState<{ teams: [Team, Team]; level: number } | null>(null);
+  const [preview, setPreview] = useState<{ teams: [Team, Team]; level: number; myLabel: string } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -52,7 +53,7 @@ export function Queue() {
       const startingCT = rng.pick([0, 1] as (0 | 1)[]);
       setPendingMatch({ kind: 'queue', seed, config: { mapId: MAP01.id, teams: [teamA, teamB], startingCT }, myId: 'a1', myTeam: 0 });
       if (cancelled) return;
-      setPreview({ teams: [teamA, teamB], level: c.level });
+      setPreview({ teams: [teamA, teamB], level: c.level, myLabel: classWithSetLabel(build) });
       timer = window.setTimeout(() => {
         if (!cancelled) nav('/match', { replace: true });
       }, PREVIEW_MS);
@@ -86,7 +87,7 @@ export function Queue() {
                   {team.players.map((p) => (
                     <div key={p.id} className={`${styles.row} ${p.id === 'a1' ? styles.me : ''}`}>
                       <span className={styles.nick}>{p.nick}</span>
-                      <span className={styles.cls}>{CLASS_LABEL[p.class]}</span>
+                      <span className={styles.cls}>{p.id === 'a1' ? preview.myLabel : CLASS_LABEL[p.class]}</span>
                       <span className={`${styles.lvl} mono`}>{p.id === 'a1' ? `lvl ${preview.level}` : `~${averageAttr(p.attrs).toFixed(0)}`}</span>
                     </div>
                   ))}

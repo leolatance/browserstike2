@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ATTR_KEYS, CLASS_LABEL, resolveBuild, type Attrs } from '@idle-strike/engine';
+import { ATTR_KEYS, type Attrs } from '@idle-strike/engine';
+import { classWithSetLabel } from '../store/buildLabel';
 import { currentBuild, unopenedBoxes } from '../store/cards';
 import { getSetting, setSetting, type LastSeen } from '../store/settings';
 import { sessionsToday } from '../store/training';
@@ -96,7 +97,7 @@ export function Lobby() {
                 {c.nick} <span className={styles.flag}>{flag}</span>
               </div>
               <div className={ui.muted}>
-                {mine ? <RankIcon mmr={mine.mmr} size={18} withName /> : 'sem patente'} · {CLASS_LABEL[resolveBuild({ cards: build ?? [] }).activeClass]}
+                {mine ? <RankIcon mmr={mine.mmr} size={18} withName /> : 'sem patente'} · {classWithSetLabel({ cards: build ?? [] })}
               </div>
               {changes?.level && (
                 <div className={styles.changed}>

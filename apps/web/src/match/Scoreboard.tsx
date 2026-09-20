@@ -10,9 +10,11 @@ interface Props {
   colorOf?: (id: string) => string;
   /** Rendered before the highlighted player's nick (profile photo). */
   avatar?: ReactNode;
+  /** Class + set progress text for the highlighted player (replaces the raw class). */
+  myClassLabel?: string;
 }
 
-export function Scoreboard({ rows, teamNames, highlight, colorOf, avatar }: Props) {
+export function Scoreboard({ rows, teamNames, highlight, colorOf, avatar, myClassLabel }: Props) {
   const [expanded, setExpanded] = useState(false);
   const groups: (0 | 1)[] = rows.find((r) => r.side === 'CT')?.team === 1 ? [1, 0] : [0, 1];
   return (
@@ -44,7 +46,7 @@ export function Scoreboard({ rows, teamNames, highlight, colorOf, avatar }: Prop
                     <span className={styles.dot} data-side={r.side} style={colorOf ? { background: colorOf(r.id) } : undefined} />
                     {r.id === highlight && avatar}
                     {r.nick}
-                    {expanded && <span className={styles.cls}>{r.cls}</span>}
+                    {expanded && <span className={styles.cls}>{r.id === highlight && myClassLabel ? myClassLabel : r.cls}</span>}
                   </td>
                   <td className="mono">{r.kills}</td>
                   <td className="mono">{r.deaths}</td>
