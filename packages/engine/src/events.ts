@@ -142,6 +142,13 @@ export interface UtilEvent extends Base {
   area: AreaId;
 }
 
+/** Drill modes only: the player is back in play at `area`. */
+export interface RespawnEvent extends Base {
+  type: 'respawn';
+  player: PlayerId;
+  area: AreaId;
+}
+
 export interface PlantEvent extends Base {
   type: 'plant';
   player: PlayerId;
@@ -196,6 +203,7 @@ export type MatchEvent =
   | FlashAssistEvent
   | UtilEvent
   | DuelEvent
+  | RespawnEvent
   | PlantEvent
   | DefuseStartEvent
   | DefuseCancelEvent
@@ -261,6 +269,8 @@ export interface MatchLog {
   /** Rounds per regulation half / per overtime half. */
   mr: number;
   otMr: number;
+  /** Drill logs: 'dm' or a scenario kind; absent for real matches. */
+  drill?: string;
   events: MatchEvent[];
   rounds: RoundSummary[];
   /** Final score: [team 0, team 1]. */

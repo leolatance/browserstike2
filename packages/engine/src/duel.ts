@@ -86,6 +86,8 @@ export interface DuelContext {
   numbersAdvantage: 'A' | 'D' | null;
   attackerFlags?: DuelFlags;
   defenderFlags?: DuelFlags;
+  /** Extra retreat chance for both (deathmatch: players disengage more). */
+  retreatBonus?: number;
 }
 
 export interface DuelResult {
@@ -195,7 +197,7 @@ export function resolveDuel(a: Duelist, d: Duelist, ctx: DuelContext, rng: Rng):
   const canRetreat = loser.hp > DUEL.RETREAT_MIN_HP;
   // Anchor set: better at escaping when defending the site.
   const anchorBonus = loser === d && ctx.defenderFlags?.atSite ? (d.siteSurvival ?? 0) : 0;
-  const loserSurvived = canRetreat && rng.chance(retreatChance(loser.attrs.mov) + anchorBonus);
+  const loserSurvived = canRetreat && rng.chance(retreatChance(loser.attrs.mov) + anchorBonus + (ctx.retreatBonus ?? 0));
   const damage = loserSurvived ? Math.min(loser.hp - 1, rng.int(20, 70)) : loser.hp;
 
   return { winner: aWins ? 'A' : 'D', pWin, headshot, loserSurvived, damage, triggered };
