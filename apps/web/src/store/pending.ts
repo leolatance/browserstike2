@@ -4,9 +4,20 @@
  */
 import type { MatchLog, Team } from '@idle-strike/engine';
 import type { DuelTargetStats } from '../minigames/duelTarget';
+import type { OnlineRewards } from './online';
+
+export interface OnlineInfo {
+  matchId: number;
+  hash: string;
+  rewards: OnlineRewards;
+  result: { score: [number, number]; winner: 0 | 1; rating: number; won: boolean };
+  realPlayers: number;
+}
 
 export interface MatchSource {
-  kind: 'queue' | 'replay' | 'dev';
+  kind: 'queue' | 'replay' | 'dev' | 'online';
+  /** Server-decided data for an online match. */
+  online?: OnlineInfo;
   seed: number;
   config: { mapId: string; teams: [Team, Team]; startingCT: 0 | 1 };
   /** Character's player id in the teams (queue/replay). */

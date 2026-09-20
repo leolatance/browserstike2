@@ -57,6 +57,15 @@ export async function startSync(s: Session | null): Promise<void> {
   });
 }
 
+/** Forces a pull of the cloud copy (after an online match settled on the server). */
+export async function pullNow(): Promise<void> {
+  if (!supabase || !session) return;
+  const uid = session.user.id;
+  const local = await db.character.get(1);
+  const { data: remote } = await supabase.from('characters').select('*').eq('user_id', uid).maybeSingle();
+  if (remote) await pullInto(uid, remote, local);
+}
+
 /** Server newer than our last push → replace local; otherwise push local. */
 async function pullOrUpload(): Promise<void> {
   if (!supabase || !session) return;

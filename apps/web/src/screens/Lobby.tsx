@@ -7,6 +7,8 @@ import { sessionsToday } from '../store/training';
 import { dailyYield } from '../progression/training';
 import { useSession } from '../store/auth';
 import { cloudEnabled } from '../store/supabase';
+import { fetchMyMmr, markSeen, unseenPassive, type PassiveSummary } from '../store/online';
+import { RankIcon } from '../ui/RankIcon';
 import { attrCap, xpForLevel } from '../progression/xp';
 import { COUNTRIES, getCharacter } from '../store/character';
 import { career } from '../store/matches';
@@ -30,6 +32,15 @@ export function Lobby() {
   const { data: boxes } = useQuery(unopenedBoxes);
   const [changes, setChanges] = useState<Changes | null>(null);
   const { session } = useSession();
+  const { data: mine } = useQuery(() => (session ? fetchMyMmr() : Promise.resolve(null)), [session?.user.id]);
+  const [passive, setPassive] = useState<PassiveSummary | null>(null);
+  useEffect(() => {
+    if (!session) return;
+    unseenPassive().then((p) => {
+      setPassive(p);
+      if (p) void markSeen(p.ids);
+    });
+  }, [session]);
   const snapped = useRef(false);
 
   // Highlight what changed since the last visit for 3s, then snapshot.
@@ -71,6 +82,12 @@ export function Lobby() {
             <span>entre com e-mail ou Google pra guardar o boneco na nuvem e jogar a queue online</span>
           </Link>
         )}
+        {passive && (
+          <div className={styles.notice}>
+            <b>seu boneco jogou {passive.count} {passive.count === 1 ? 'partida' : 'partidas'} enquanto você tava fora</b>
+            <span>rating {passive.avgRating.toFixed(2)} · passivo não mexe na patente</span>
+          </div>
+        )}
         <section className={`${ui.card} ${styles.hero}`}>
           <div className={styles.identity}>
             <Avatar photo={c.photo ?? null} nick={c.nick} size={64} />
@@ -78,7 +95,9 @@ export function Lobby() {
               <div className={styles.nick}>
                 {c.nick} <span className={styles.flag}>{flag}</span>
               </div>
-              <div className={ui.muted}>sem patente · {CLASS_LABEL[resolveBuild({ cards: build ?? [] }).activeClass]}</div>
+              <div className={ui.muted}>
+                {mine ? <RankIcon mmr={mine.mmr} size={18} withName /> : 'sem patente'} · {CLASS_LABEL[resolveBuild({ cards: build ?? [] }).activeClass]}
+              </div>
               {changes?.level && (
                 <div className={styles.changed}>
                   nível {changes.level[0]} → {changes.level[1]} · cap {attrCap(changes.level[1]).toFixed(1)}
@@ -151,6 +170,12 @@ export function Lobby() {
             <b>Perfil</b>
             <span>carreira e histórico</span>
           </Link>
+          {cloudEnabled && (
+            <Link to="/ranking" className={styles.action}>
+              <b>Ranking</b>
+              <span>rating e patente</span>
+            </Link>
+          )}
         </section>
       </div>
     </Shell>

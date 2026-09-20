@@ -15,6 +15,9 @@ import { BuildScreen } from './screens/BuildScreen';
 import { Login } from './screens/Login';
 import { PublicProfile } from './screens/PublicProfile';
 import { SyncBoot } from './store/SyncBoot';
+import { QueueOnline } from './screens/QueueOnline';
+import { ResultOnline } from './screens/ResultOnline';
+import { Ranking } from './screens/Ranking';
 
 /** Redirects to onboarding until a character exists. */
 function RequireCharacter({ children }: { children: ReactNode }) {
@@ -75,6 +78,23 @@ export function App() {
         />
         <Route path="/match" element={<MatchScreen />} />
         <Route path="/login" element={<Login />} />
+        <Route
+          path="/queue-online"
+          element={
+            <RequireCharacter>
+              <QueueOnline />
+            </RequireCharacter>
+          }
+        />
+        <Route
+          path="/resultado-online"
+          element={
+            <RequireCharacter>
+              <ResultOnline />
+            </RequireCharacter>
+          }
+        />
+        <Route path="/ranking" element={<Ranking />} />
         <Route path="/u/:nick" element={<PublicProfile />} />
         <Route
           path="/perfil"

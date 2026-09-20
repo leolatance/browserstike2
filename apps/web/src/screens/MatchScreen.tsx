@@ -93,7 +93,7 @@ function MatchView({ source }: { source: MatchSource }) {
   const ri = player.rounds[state.roundIdx] ?? player.rounds[0]!;
 
   // Radar colours: player view by default in a queue match, HLTV in replays/dev.
-  const [viewMode, setViewMode] = useState<ViewMode>(source.kind === 'queue' ? 'player' : 'hltv');
+  const [viewMode, setViewMode] = useState<ViewMode>(source.kind === 'queue' || source.kind === 'online' ? 'player' : 'hltv');
   const [profile, setProfile] = useState<{ color: PlayerColor; photo: Blob | null; nick: string } | null>(null);
   useEffect(() => {
     getCharacter().then((c) => c && setProfile({ color: c.color ?? colorFromNick(c.nick), photo: c.photo ?? null, nick: c.nick }));
@@ -123,7 +123,7 @@ function MatchView({ source }: { source: MatchSource }) {
   // Hand the finished match to /resultado (queue) — never rewards a replay.
   useEffect(() => {
     if (!state.finished) return;
-    if (source.kind === 'queue') setOutcome({ source, log, minigame: minigameOn ? game.stats() : null });
+    if (source.kind === 'queue' || source.kind === 'online') setOutcome({ source, log, minigame: minigameOn ? game.stats() : null });
   }, [state.finished, source, log, minigameOn, game]);
   // Dev-only hook so the log can be inspected from the browser console.
   if (import.meta.env.DEV) (window as unknown as { __match?: unknown }).__match = { log, player, game };
@@ -211,10 +211,11 @@ function MatchView({ source }: { source: MatchSource }) {
 
   const leave = useCallback(() => {
     if (source.kind === 'queue') nav('/resultado');
+    else if (source.kind === 'online') nav('/resultado-online');
     else if (source.kind === 'replay') nav('/perfil');
     else window.location.assign(`/match?seed=${Math.floor(Math.random() * 1_000_000)}`);
   }, [source.kind, nav]);
-  const leaveLabel = source.kind === 'queue' ? 'Ver resultado' : source.kind === 'replay' ? 'Voltar ao perfil' : 'Nova partida';
+  const leaveLabel = source.kind === 'queue' || source.kind === 'online' ? 'Ver resultado' : source.kind === 'replay' ? 'Voltar ao perfil' : 'Nova partida';
 
   // "sair": a queue match left early counts as a loss with rating 0 and no XP.
   const exit = useCallback(async () => {
@@ -245,9 +246,15 @@ function MatchView({ source }: { source: MatchSource }) {
       nav('/resultado');
       return;
     }
+    if (source.kind === 'online') {
+      // Already settled on the server: leaving only skips the replay.
+      setOutcome({ source, log, minigame: null });
+      nav('/resultado-online');
+      return;
+    }
     nav('/lobby');
   }, [player, source, state.finished, log, nav]);
-  const exitLabel = source.kind === 'queue' ? 'Sair (conta como derrota)' : 'Fechar';
+  const exitLabel = source.kind === 'queue' ? 'Sair (conta como derrota)' : source.kind === 'online' ? 'Pular pro resultado' : 'Fechar';
 
   return (
     <div className={styles.screen}>

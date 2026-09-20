@@ -36,7 +36,7 @@ export function PublicProfile() {
       return;
     }
     supabase
-      .from('public_profiles')
+      .from('public_profiles_v2')
       .select('*')
       .ilike('nick', nick)
       .maybeSingle()
