@@ -35,8 +35,15 @@
   position: absolute;
   right: 12px;
   top: calc(12px + env(safe-area-inset-top));
-  width: min(300px, 70vw);
+  width: min(320px, 72vw);
   font-size: 12px;
+  opacity: 0.85;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.feed > div {
+  min-height: 0;
 }
 
 .shade {

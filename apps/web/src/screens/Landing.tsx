@@ -13,7 +13,7 @@ import styles from './Landing.module.css';
 /** Seed picked for a 1v3 clutch in round 1 and a 6–6 first half (see scripts/seedpick). */
 export const TRAILER_SEED = 4;
 export const TAGLINE = 'CS pra quando você não pode abrir o CS.';
-export const SUBLINE = 'Seu boneco. Partidas 5x5 simuladas, treino, cartas, patente e ranking. No navegador, no celular, no Mac.';
+export const SUBLINE = 'Seu boneco. Partidas 5x5 online contra outros jogadores, treino, cartas, patente e ranking. No navegador, no celular, no Mac.';
 
 /** Landing for visitors without a character: the match itself is the trailer. */
 export function Landing() {
@@ -47,10 +47,12 @@ export function Landing() {
   const ri = player.rounds[player.getState().roundIdx] ?? player.rounds[0]!;
   const scheme = useMemo(() => colorScheme(log, 'hltv', 'a1', 0, 'yellow', ri.start.sides), [log, ri]);
   const nick = useMemo(() => new Map(log.teams.flatMap((t) => t.players.map((p) => [p.id, p.nick] as const))), [log]);
-  const t = player.getState().t;
-  const feed: FeedEntry[] = ri.events
-    .filter((e): e is KillEvent => isEvent(e, 'kill') && e.t <= t)
-    .slice(-4)
+  const st = player.getState();
+  const t = st.t;
+  const feed: FeedEntry[] = player.rounds
+    .slice(0, st.roundIdx + 1)
+    .flatMap((r, i) => r.events.filter((e): e is KillEvent => isEvent(e, 'kill') && (i < st.roundIdx || e.t <= t)))
+    .slice(-8)
     .reverse()
     .map((kill) => ({
       kill,
@@ -76,10 +78,10 @@ export function Landing() {
         <div className={styles.radar}>
           <Radar player={player} map={MAP01} highlight="" scheme={scheme} />
         </div>
-        <div className={styles.feed}>
-          <KillFeed entries={feed} />
-        </div>
         <div className={styles.shade} />
+      </div>
+      <div className={styles.feed} aria-hidden="true">
+        <KillFeed entries={feed} />
       </div>
 
       <main className={styles.hero}>
