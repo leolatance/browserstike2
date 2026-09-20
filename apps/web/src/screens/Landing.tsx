@@ -13,7 +13,7 @@ import styles from './Landing.module.css';
 /** Seed picked for a 1v3 clutch in round 1 and a 6–6 first half (see scripts/seedpick). */
 export const TRAILER_SEED = 4;
 export const TAGLINE = 'CS pra quando você não pode abrir o CS.';
-export const SUBLINE = 'Seu boneco. Partidas 5x5 online contra outros jogadores, treino, cartas, patente e ranking. No navegador, no celular, no Mac.';
+export const SUBLINE = 'Partidas 5x5 online contra outros jogadores, contra bot, treino, builds, patente e ranking. No celular ou PC.';
 
 /** Landing for visitors without a character: the match itself is the trailer. */
 export function Landing() {
@@ -88,6 +88,7 @@ export function Landing() {
         <div className={styles.brand}>IDLE STRIKE 2</div>
         <h1 className={styles.tagline}>{TAGLINE}</h1>
         <p className={styles.sub}>{SUBLINE}</p>
+        <p className={styles.kicker}>Crie seu player e seja o melhor em IS2.</p>
         <Link to="/onboarding" className={styles.cta}>
           Criar boneco
         </Link>
