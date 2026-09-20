@@ -49,6 +49,8 @@ export interface ScenarioResult {
   /** Retake scenarios: the call used, and the one the hidden setup rewarded. */
   call?: RetakeCall;
   correctCall?: RetakeCall;
+  /** Retake scenarios: where the defenders really were (revealed at the end). */
+  setupAreas?: { player: PlayerId; area: AreaId }[];
   log: MatchLog;
 }
 
@@ -442,6 +444,7 @@ export function simulateScenario(kind: ScenarioKind, config: DrillConfig, seed: 
   let defenderStart: AreaId = map.spawns.T;
   let holdAngle = true;
   let correctCall: RetakeCall | undefined;
+  let setupAreas: { player: PlayerId; area: AreaId }[] | undefined;
   let attackerDelay = 0;
 
   switch (kind) {
@@ -458,9 +461,10 @@ export function simulateScenario(kind: ScenarioKind, config: DrillConfig, seed: 
     }
     case 'peek': {
       // The character swings on a bot holding a fresh angle, repeatedly.
+      // The character respawns right at the angle (like aim1v1) so the cycle is respawn → swing.
       fightArea = site.entrances[0];
-      attackerStart = map.spawns.T === site.entrances[0] ? map.spawns.T : (shortestPath(map, map.spawns.T, site.entrances[0])?.path.at(-2) as AreaId) ?? map.spawns.T;
-      defenderStart = site.plant;
+      attackerStart = site.entrances[0];
+      defenderStart = site.entrances[0];
       attackers = [mkLive(me, 'CT', 0, attackerStart, true)];
       defenders = foes(1, ['anchor']).map((p) => mkLive(p, 'T', 1, defenderStart, false));
       respawn = true;
@@ -485,8 +489,18 @@ export function simulateScenario(kind: ScenarioKind, config: DrillConfig, seed: 
       defenders = foes(2, ['rifler', 'anchor']).map((p) => mkLive(p, 'T', 1, defenderStart, false));
       retakeProT = 'D';
       // Hidden setup: the right call breaks their angles; the wrong one walks into them.
+      // padrao ← spread (plant + main entrance), flanco ← stacked on the plant, agressivo ← forward at the entrance.
       const setup = rng.pick(RETAKE_CALLS);
       correctCall = COUNTER[setup];
+      const spots: Record<RetakeCall, [AreaId, AreaId]> = {
+        padrao: [site.plant, site.entrances[0]],
+        flanco: [site.plant, site.plant],
+        agressivo: [site.entrances[0], site.entrances[1]],
+      };
+      defenders.forEach((d, i) => {
+        d.area = spots[setup][i] as AreaId;
+      });
+      setupAreas = defenders.map((d) => ({ player: d.id, area: d.area }));
       const used = call ?? 'padrao';
       if (used === correctCall) holdAngle = false;
       if (used === 'agressivo') attackerDelay = -3;
@@ -507,6 +521,13 @@ export function simulateScenario(kind: ScenarioKind, config: DrillConfig, seed: 
   attackers.forEach((l, i) => {
     l.busyUntil = walk(a, l, fightArea, Math.max(0, 1 + i * 2 + attackerDelay));
   });
+  if (kind === 'execute') {
+    // The execute is a util scenario: smoke the site, flash the entry.
+    const arrive = Math.min(...attackers.map((l) => l.busyUntil));
+    emit(a, { type: 'util', round: 1, t: Math.max(0, arrive - 3), player: me.id, util: 'smoke', area: fightArea });
+    emit(a, { type: 'util', round: 1, t: Math.max(0, arrive - 1), player: me.id, util: 'flash', area: fightArea });
+    for (const d of defenders) d.settledAt = arrive; // flashed: no fresh angle on the first contact
+  }
 
   let myDuels = 0;
   let myWins = 0;
@@ -578,6 +599,7 @@ export function simulateScenario(kind: ScenarioKind, config: DrillConfig, seed: 
   if (correctCall) {
     result.call = call ?? 'padrao';
     result.correctCall = correctCall;
+    result.setupAreas = setupAreas;
   }
   return result;
 }
