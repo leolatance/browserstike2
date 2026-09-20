@@ -12,6 +12,9 @@ import { Training } from './screens/Training';
 import { Deathmatch } from './screens/Deathmatch';
 import { Inventory } from './screens/Inventory';
 import { BuildScreen } from './screens/BuildScreen';
+import { Login } from './screens/Login';
+import { PublicProfile } from './screens/PublicProfile';
+import { SyncBoot } from './store/SyncBoot';
 
 /** Redirects to onboarding until a character exists. */
 function RequireCharacter({ children }: { children: ReactNode }) {
@@ -34,6 +37,7 @@ function OnboardingGate() {
 export function App() {
   return (
     <BrowserRouter>
+      <SyncBoot />
       <Routes>
         <Route path="/" element={<Navigate to="/lobby" replace />} />
         <Route path="/onboarding" element={<OnboardingGate />} />
@@ -70,6 +74,8 @@ export function App() {
           }
         />
         <Route path="/match" element={<MatchScreen />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/u/:nick" element={<PublicProfile />} />
         <Route
           path="/perfil"
           element={

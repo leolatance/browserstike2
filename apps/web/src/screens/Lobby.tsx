@@ -5,6 +5,8 @@ import { currentBuild, unopenedBoxes } from '../store/cards';
 import { getSetting, setSetting, type LastSeen } from '../store/settings';
 import { sessionsToday } from '../store/training';
 import { dailyYield } from '../progression/training';
+import { useSession } from '../store/auth';
+import { cloudEnabled } from '../store/supabase';
 import { attrCap, xpForLevel } from '../progression/xp';
 import { COUNTRIES, getCharacter } from '../store/character';
 import { career } from '../store/matches';
@@ -27,6 +29,7 @@ export function Lobby() {
   const { data: build } = useQuery(currentBuild);
   const { data: boxes } = useQuery(unopenedBoxes);
   const [changes, setChanges] = useState<Changes | null>(null);
+  const { session } = useSession();
   const snapped = useRef(false);
 
   // Highlight what changed since the last visit for 3s, then snapshot.
@@ -62,6 +65,12 @@ export function Lobby() {
   return (
     <Shell title="Lobby">
       <div className={ui.page}>
+        {cloudEnabled && !session && (
+          <Link to="/login" className={styles.notice}>
+            <b>sem conta = sem online</b>
+            <span>entre com e-mail ou Google pra guardar o boneco na nuvem e jogar a queue online</span>
+          </Link>
+        )}
         <section className={`${ui.card} ${styles.hero}`}>
           <div className={styles.identity}>
             <Avatar photo={c.photo ?? null} nick={c.nick} size={64} />
@@ -119,10 +128,17 @@ export function Lobby() {
             <b>Queue solo</b>
             <span>5x5 contra bots · XP</span>
           </Link>
-          <div className={`${styles.action} ${styles.disabled}`} aria-disabled="true">
-            <b>Queue online</b>
-            <span>Fase 2</span>
-          </div>
+          {cloudEnabled && session ? (
+            <Link to="/queue-online" className={styles.action}>
+              <b>Queue online</b>
+              <span>bonecos reais · patente</span>
+            </Link>
+          ) : (
+            <Link to="/login" className={`${styles.action} ${styles.disabled}`}>
+              <b>Queue online</b>
+              <span>precisa de conta</span>
+            </Link>
+          )}
           <Link to="/build" className={styles.action}>
             <b>Build</b>
             <span>{build?.length ?? 0} cartas equipadas</span>

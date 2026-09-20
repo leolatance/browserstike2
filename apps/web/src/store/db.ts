@@ -23,6 +23,8 @@ export interface CharacterRecord {
   photo?: Blob;
   /** Player colour (CS rule: 5 fixed colours; v4). */
   color: PlayerColor;
+  /** Last local write (v5), compared with the cloud's updated_at. */
+  updatedAt?: number;
 }
 
 export type PlayerColor = 'yellow' | 'purple' | 'green' | 'blue' | 'orange';
@@ -72,6 +74,9 @@ export interface MatchRecord {
   };
   /** Left the match early: counted as a loss, rating 0, no XP. */
   abandoned?: boolean;
+  /** Server row id once pushed (v5). */
+  cloudId?: number;
+  mode?: 'solo' | 'online';
 }
 
 export interface TrainingRecord {
@@ -148,6 +153,8 @@ export class IdleStrikeDB extends Dexie {
             c.color ??= colorFromNick(c.nick ?? '');
           }),
       );
+    // v5: sync bookkeeping (cloudId index on matches).
+    this.version(5).stores({ matches: '++id, playedAt, cloudId' });
   }
 }
 

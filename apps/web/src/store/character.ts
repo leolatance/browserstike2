@@ -64,7 +64,7 @@ export async function createCharacter(nick: string, country: string, photo?: Blo
 }
 
 export async function updateCharacter(patch: Partial<CharacterRecord>): Promise<void> {
-  await db.character.update(1, patch);
+  await db.character.update(1, { ...patch, updatedAt: Date.now() });
   notify();
 }
 

@@ -45,6 +45,23 @@
   background: var(--ct);
 }
 
+.notice {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--accent-soft);
+  color: var(--text-0);
+  text-decoration: none;
+  font-size: 12px;
+}
+
+.notice span {
+  color: var(--text-1);
+}
+
 .changed {
   color: var(--ok);
   font-size: 12px;

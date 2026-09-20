@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db, type MatchRecord } from '../store/db';
 import { careerFromMatches } from '../store/matches';
@@ -7,6 +7,10 @@ import { PLAYER_COLORS } from '../store/db';
 import { COLOR_LABEL, COLOR_VAR } from '../match/colors';
 import { Avatar } from '../ui/Avatar';
 import { resizeToJpeg } from '../ui/photo';
+import { signOut, useSession } from '../store/auth';
+import { cloudEnabled } from '../store/supabase';
+import { NickTakenError, onSync, push, type SyncStatus } from '../store/sync';
+import { updateCharacter } from '../store/character';
 import { useQuery } from '../store/useQuery';
 import { Shell } from '../ui/Shell';
 import ui from '../ui/ui.module.css';
@@ -67,6 +71,21 @@ function RatingChart({ ratings }: { ratings: number[] }) {
 
 export function Profile() {
   const nav = useNavigate();
+  const { session } = useSession();
+  const [sync, setSync] = useState<SyncStatus>('off');
+  const [nickErr, setNickErr] = useState<string | null>(null);
+  const [newNick, setNewNick] = useState('');
+  useEffect(() => onSync((s) => setSync(s)), []);
+  const retryNick = async () => {
+    if (newNick.trim().length < 3) return;
+    await updateCharacter({ nick: newNick.trim() });
+    try {
+      await push();
+      setNickErr(null);
+    } catch (e) {
+      setNickErr(e instanceof NickTakenError ? e.message : (e as Error).message);
+    }
+  };
   const { data: c } = useQuery(getCharacter);
   const { data: all } = useQuery(() => db.matches.toArray());
   const cs = all ? careerFromMatches(all) : null;
@@ -102,6 +121,47 @@ export function Profile() {
             </div>
           </div>
         </section>
+        {cloudEnabled && (
+          <section className={ui.card}>
+            <span className={ui.h2}>Conta</span>
+            {session ? (
+              <>
+                <div className={ui.row}>
+                  <span>{session.user.email ?? session.user.id}</span>
+                  <span className={ui.muted}>sync: {sync === 'error' ? 'erro' : sync === 'pushing' ? 'enviando…' : 'ok'}</span>
+                  <button onClick={() => void signOut()}>Sair</button>
+                </div>
+                {c && (
+                  <div className={ui.row}>
+                    <span className={ui.muted}>link público:</span>
+                    <a href={`/u/${encodeURIComponent(c.nick)}`}>{`${window.location.origin}/u/${c.nick}`}</a>
+                    <button
+                      onClick={() => {
+                        void navigator.clipboard?.writeText(`${window.location.origin}/u/${c.nick}`);
+                      }}
+                    >
+                      copiar
+                    </button>
+                  </div>
+                )}
+                {(sync === 'error' || nickErr) && (
+                  <div className={ui.row}>
+                    <span style={{ color: 'var(--danger)' }}>{nickErr ?? 'Falha ao sincronizar. Se o nick já existe, escolha outro:'}</span>
+                    <input className={ui.input} style={{ maxWidth: 200 }} placeholder="novo nick" value={newNick} onChange={(e) => setNewNick(e.target.value)} />
+                    <button onClick={() => void retryNick()}>usar este nick</button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className={ui.row}>
+                <span className={ui.muted}>sem conta = sem online e sem link público</span>
+                <button className="primary" onClick={() => nav('/login')}>
+                  Entrar
+                </button>
+              </div>
+            )}
+          </section>
+        )}
         <section className={ui.grid3}>
           <div className={ui.stat}>
             <b>{cs?.matches ?? 0}</b>

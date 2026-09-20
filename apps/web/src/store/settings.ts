@@ -13,6 +13,11 @@ export interface Settings {
   sound: boolean;
   /** Snapshot taken when the lobby was last shown, to highlight what changed. */
   lastSeen: LastSeen | null;
+  /** Cloud sync bookkeeping. */
+  lastPushAt: number | null;
+  photoUploadedAt: number | null;
+  /** Passive online participations already shown in the lobby. */
+  seenParticipations: number;
   treinoSeconds: number;
   dmSeconds: number;
 }
@@ -21,6 +26,9 @@ export const SETTING_DEFAULTS: Settings = {
   minigame: true,
   sound: false,
   lastSeen: null,
+  lastPushAt: null,
+  photoUploadedAt: null,
+  seenParticipations: 0,
   /** Session lengths (seconds) — editable for testing: __db.db.settings.put({key:'treinoSeconds', value: 30}) */
   treinoSeconds: TRAINING.TREINO_SECONDS,
   dmSeconds: TRAINING.DM_SECONDS,
