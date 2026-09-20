@@ -5,8 +5,21 @@
  */
 import { Rng } from '@idle-strike/engine';
 
+export type Variant = 'alvo' | 'timing' | 'premira' | 'flash';
+
+export const VARIANT_LABEL: Record<Variant, string> = { alvo: 'alvo', timing: 'timing', premira: 'pré-mira', flash: 'flashado' };
+
 export const DUEL_TARGET = {
   VISIBLE_MS: 900,
+  /** timing: the bar sweeps in SWEEP_MS, the green zone is ZONE_MS wide; 0 score at ZERO_MS from the centre. */
+  SWEEP_MS: 1200,
+  ZONE_MS: 180,
+  ZERO_MS: 400,
+  /** pré-mira: the enemy appears APPEAR_MIN..APPEAR_MAX ms after the corner is shown. */
+  APPEAR_MIN_MS: 300,
+  APPEAR_MAX_MS: 700,
+  /** flashado: white overlay fading over FLASH_MS. */
+  FLASH_MS: 300,
   /** Reaction ≤ this is a full reaction score. */
   MIN_REACTION_MS: 150,
   W_REACTION: 0.6,
@@ -22,6 +35,11 @@ export interface Target {
   id: string;
   /** Situation label shown on the target (does not affect the score). */
   label: string | null;
+  variant: Variant;
+  /** timing: when the sweep reaches the zone centre (ms since spawn). */
+  zoneAtMs: number;
+  /** pré-mira: when the enemy shows up (ms since spawn). */
+  appearAtMs: number;
   /** Normalised 0..1 position. */
   x: number;
   y: number;
@@ -85,17 +103,28 @@ export class DuelTargetGame {
   }
 
   /** A duel involving the player just started. Any pending target counts as missed. */
-  spawn(id: string, nowMs: number, label: string | null = null, at?: { x: number; y: number }): Target {
+  spawn(id: string, nowMs: number, label: string | null = null, at?: { x: number; y: number }, variant: Variant = 'alvo'): Target {
     if (this.current) this.miss();
     const rng = new Rng(hashSeed(id));
     const m = DUEL_TARGET.MARGIN;
-    this.current = { id, label, x: at?.x ?? m + rng.next() * (1 - 2 * m), y: at?.y ?? m + rng.next() * (1 - 2 * m), spawnedAt: nowMs };
+    const x = at?.x ?? m + rng.next() * (1 - 2 * m);
+    const y = at?.y ?? m + rng.next() * (1 - 2 * m);
+    const zoneAtMs = Math.round(DUEL_TARGET.SWEEP_MS * (0.3 + rng.next() * 0.5));
+    const appearAtMs = Math.round(DUEL_TARGET.APPEAR_MIN_MS + rng.next() * (DUEL_TARGET.APPEAR_MAX_MS - DUEL_TARGET.APPEAR_MIN_MS));
+    this.current = { id, label, variant, zoneAtMs, appearAtMs, x, y, spawnedAt: nowMs };
     return this.current;
+  }
+
+  /** How long this target stays up (variant-dependent). */
+  windowMs(t: Target): number {
+    if (t.variant === 'timing') return DUEL_TARGET.SWEEP_MS;
+    if (t.variant === 'premira') return t.appearAtMs + this.visibleMs;
+    return this.visibleMs;
   }
 
   /** Expire the target when its window is over. Returns true if it just expired. */
   tick(nowMs: number): boolean {
-    if (this.current && nowMs - this.current.spawnedAt >= this.visibleMs) {
+    if (this.current && nowMs - this.current.spawnedAt >= this.windowMs(this.current)) {
       this.miss();
       return true;
     }
@@ -108,16 +137,29 @@ export class DuelTargetGame {
    */
   pointer(distance: number, nowMs: number): DuelScore | null {
     if (!this.current) return null;
-    const reactionMs = nowMs - this.current.spawnedAt;
-    const inside = distance < 1;
-    const result: DuelScore = {
-      id: this.current.id,
-      label: this.current.label,
-      hit: true,
-      score: inside ? scoreFor(reactionMs, distance, this.visibleMs) : 0,
-      reactionMs,
-      distance,
-    };
+    const t = this.current;
+    const sinceSpawn = nowMs - t.spawnedAt;
+    let score: number;
+    let reactionMs = sinceSpawn;
+    if (t.variant === 'timing') {
+      // One tap anywhere: score by distance (in time) from the zone centre.
+      const off = Math.abs(sinceSpawn - t.zoneAtMs);
+      score = off <= DUEL_TARGET.ZONE_MS / 2 ? 100 : Math.round(Math.max(0, 100 * (1 - (off - DUEL_TARGET.ZONE_MS / 2) / (DUEL_TARGET.ZERO_MS - DUEL_TARGET.ZONE_MS / 2))));
+      reactionMs = off;
+    } else if (t.variant === 'premira') {
+      // Tap the head mark before the enemy shows up = 100; after, by reaction.
+      const inside = distance < 1;
+      if (!inside) score = 0;
+      else if (sinceSpawn <= t.appearAtMs) score = 100;
+      else {
+        reactionMs = sinceSpawn - t.appearAtMs;
+        score = scoreFor(reactionMs, distance, this.visibleMs);
+      }
+    } else {
+      const inside = distance < 1;
+      score = inside ? scoreFor(reactionMs, distance, this.visibleMs) : 0;
+    }
+    const result: DuelScore = { id: t.id, label: t.label, hit: true, score, reactionMs, distance };
     this.results.push(result);
     this.current = null;
     return result;
