@@ -96,6 +96,7 @@ export function Deathmatch() {
         {step.kind === 'running' && session && (
           <DrillView
             log={session.log}
+            myColor={c.color}
             me="a1"
             title="Deathmatch"
             subtitle={`${session.myKills} kills no total · ganho por kill +${perKill.toFixed(2)}`}

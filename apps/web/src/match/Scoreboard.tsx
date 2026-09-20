@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { ReactNode } from 'react';
 import type { LiveRow } from './stats';
 import styles from './Scoreboard.module.css';
 
@@ -6,9 +7,12 @@ interface Props {
   rows: LiveRow[];
   teamNames: [string, string];
   highlight: string;
+  colorOf?: (id: string) => string;
+  /** Rendered before the highlighted player's nick (profile photo). */
+  avatar?: ReactNode;
 }
 
-export function Scoreboard({ rows, teamNames, highlight }: Props) {
+export function Scoreboard({ rows, teamNames, highlight, colorOf, avatar }: Props) {
   const [expanded, setExpanded] = useState(false);
   const groups: (0 | 1)[] = rows.find((r) => r.side === 'CT')?.team === 1 ? [1, 0] : [0, 1];
   return (
@@ -37,7 +41,8 @@ export function Scoreboard({ rows, teamNames, highlight }: Props) {
               {team.map((r) => (
                 <tr key={r.id} className={`${r.id === highlight ? styles.me : ''} ${r.alive ? '' : styles.dead}`}>
                   <td className={styles.nick}>
-                    <span className={styles.dot} data-side={r.side} />
+                    <span className={styles.dot} data-side={r.side} style={colorOf ? { background: colorOf(r.id) } : undefined} />
+                    {r.id === highlight && avatar}
                     {r.nick}
                     {expanded && <span className={styles.cls}>{r.cls}</span>}
                   </td>

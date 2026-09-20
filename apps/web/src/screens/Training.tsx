@@ -159,7 +159,7 @@ interface SessionProps {
   onDone: (d: Done) => void;
 }
 
-type Phase = { kind: 'prompt' } | { kind: 'play'; result: ScenarioResult };
+type Phase = { kind: 'prompt' } | { kind: 'play'; result: ScenarioResult } | { kind: 'reveal'; result: ScenarioResult };
 
 function ScenarioSession({ character, build, focus, chain, startedAt, minigame, yieldFactor, yieldLabel, onDone }: SessionProps) {
   const [idx, setIdx] = useState(0);
@@ -197,9 +197,7 @@ function ScenarioSession({ character, build, focus, chain, startedAt, minigame, 
     if (phase.kind === 'prompt' && !needsCall && !needsLineup) start();
   }, [phase.kind, needsCall, needsLineup, start]);
 
-  const onScenarioFinish = useCallback(async () => {
-    if (phase.kind !== 'play') return;
-    const r = phase.result;
+  const advance = useCallback(async (r: ScenarioResult) => {
     const nextResults = [...results, r];
     setResults(nextResults);
     // Per-scenario slice of the base gain.
@@ -236,9 +234,22 @@ function ScenarioSession({ character, build, focus, chain, startedAt, minigame, 
     const miniAvg = useTarget ? game.stats().averageAll : focus === 'util' && lineups.length ? lineups.reduce((s, v) => s + v, 0) / lineups.length : Math.round((mult - 1) * 200);
     await saveSession({ day: localDay(), startedAt, mode: 'treino', focus, gains, minigameAverage: Math.round(miniAvg), yieldLabel, xp });
     onDone({ gains, attrs: finalAttrs, xp, mult, results: nextResults, lineups });
-  }, [phase, results, base, chain.length, idx, focus, useTarget, game, lineups, character.attrs, yieldFactor, yieldLabel, startedAt, onDone]);
+  }, [results, base, chain.length, idx, focus, useTarget, game, lineups, character.attrs, yieldFactor, yieldLabel, startedAt, onDone]);
 
-  const title = `${phase.kind === 'play' ? phase.result.title : ''} · ${idx + 1}/${chain.length}`;
+  // Retakes reveal the real setup for 2s before moving on.
+  const onScenarioFinish = useCallback(() => {
+    if (phase.kind !== 'play') return;
+    const r = phase.result;
+    if (r.setupAreas) setPhase({ kind: 'reveal', result: r });
+    else void advance(r);
+  }, [phase, advance]);
+  useEffect(() => {
+    if (phase.kind !== 'reveal') return;
+    const id = setTimeout(() => void advance(phase.result), 2000);
+    return () => clearTimeout(id);
+  }, [phase, advance]);
+
+  const title = `${phase.kind !== 'prompt' ? phase.result.title : ''} · ${idx + 1}/${chain.length}`;
   const cap = attrCap(character.level);
 
   if (phase.kind === 'prompt') {
@@ -251,18 +262,22 @@ function ScenarioSession({ character, build, focus, chain, startedAt, minigame, 
     );
   }
 
+  const reveal = phase.kind === 'reveal' && phase.result.setupAreas ? phase.result.setupAreas.map((s, i) => ({ area: s.area, label: i === 0 ? `setup: ${CALL_LABEL[phase.result.correctCall as RetakeCall]}` : undefined })) : undefined;
   return (
     <DrillView
       key={idx}
+      myColor={character.color}
+      ghosts={reveal}
       log={phase.result.log}
       me="a1"
       title={title}
       subtitle={phase.result.call ? `call: ${CALL_LABEL[phase.result.call]}` : undefined}
       minigame={useTarget}
       game={game}
-      onFinish={() => void onScenarioFinish()}
+      onFinish={onScenarioFinish}
       focus={{ label: ATTR_LABEL[focus], value: attrs[focus], cap, gained }}
       showKills={false}
+      overlay={reveal ? <div className={styles.reveal}>setup: {CALL_LABEL[phase.result.correctCall as RetakeCall]}</div> : undefined}
     />
   );
 }

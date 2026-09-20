@@ -2,7 +2,11 @@ import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db, type MatchRecord } from '../store/db';
 import { careerFromMatches } from '../store/matches';
-import { getCharacter } from '../store/character';
+import { getCharacter, setColor, setPhoto } from '../store/character';
+import { PLAYER_COLORS } from '../store/db';
+import { COLOR_LABEL, COLOR_VAR } from '../match/colors';
+import { Avatar } from '../ui/Avatar';
+import { resizeToJpeg } from '../ui/photo';
 import { useQuery } from '../store/useQuery';
 import { Shell } from '../ui/Shell';
 import ui from '../ui/ui.module.css';
@@ -70,7 +74,34 @@ export function Profile() {
   return (
     <Shell title="Perfil">
       <div className={ui.page}>
-        <h1 className={ui.h1}>{c?.nick ?? '…'}</h1>
+        <section className={`${ui.card} ${styles.identity}`}>
+          <Avatar photo={c?.photo ?? null} nick={c?.nick ?? '?'} size={72} />
+          <div className={styles.idText}>
+            <h1 className={ui.h1}>{c?.nick ?? '…'}</h1>
+            <div className={ui.row}>
+              <label className={styles.file}>
+                {c?.photo ? 'trocar foto' : 'enviar foto'}
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) =>
+                    void (async () => {
+                      const f = e.target.files?.[0];
+                      if (f) await setPhoto(await resizeToJpeg(f));
+                    })()
+                  }
+                />
+              </label>
+              {c?.photo && <button onClick={() => void setPhoto(null)}>remover foto</button>}
+            </div>
+            <div className={styles.colors} aria-label="Cor do jogador">
+              {PLAYER_COLORS.map((col) => (
+                <button key={col} className={styles.swatch} style={{ background: COLOR_VAR[col] }} aria-pressed={c?.color === col} aria-label={COLOR_LABEL[col]} title={COLOR_LABEL[col]} onClick={() => void setColor(col)} />
+              ))}
+              <span className={ui.muted}>cor no radar: {c ? COLOR_LABEL[c.color] : '…'}</span>
+            </div>
+          </div>
+        </section>
         <section className={ui.grid3}>
           <div className={ui.stat}>
             <b>{cs?.matches ?? 0}</b>

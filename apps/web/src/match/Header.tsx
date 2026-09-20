@@ -22,6 +22,8 @@ export interface HeaderProps {
   minigame: { enabled: boolean; onToggle: () => void };
   /** Short transient notice (e.g. 'defuse interrompido'). */
   notice: string | null;
+  /** Radar colours: player view (allies coloured, enemies red) or HLTV (CT/T). */
+  view?: { mode: 'player' | 'hltv'; onToggle: () => void };
 }
 
 export function Header(p: HeaderProps) {
@@ -65,9 +67,16 @@ export function Header(p: HeaderProps) {
         <span className={`${styles.ct}`}>
           $ {money(p.econ.CT.avg)} <em>{BUY_LABEL[p.econ.CT.buy] ?? p.econ.CT.buy}</em>
         </span>
-        <button className={styles.mini} onClick={p.minigame.onToggle} aria-pressed={p.minigame.enabled}>
-          {p.minigame.enabled ? 'minigame: on' : 'assistir sem minigame'}
-        </button>
+        <span className={styles.toggles}>
+          <button className={styles.mini} onClick={p.minigame.onToggle} aria-pressed={p.minigame.enabled}>
+            {p.minigame.enabled ? 'minigame: on' : 'assistir sem minigame'}
+          </button>
+          {p.view && (
+            <button className={styles.mini} onClick={p.view.onToggle}>
+              visão: {p.view.mode === 'player' ? 'jogador' : 'HLTV'}
+            </button>
+          )}
+        </span>
         <span className={`${styles.t}`}>
           $ {money(p.econ.T.avg)} <em>{BUY_LABEL[p.econ.T.buy] ?? p.econ.T.buy}</em>
         </span>

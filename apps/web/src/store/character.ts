@@ -1,7 +1,7 @@
 import { ATTR_KEYS, Rng, clampAttr, type AttrKey, type Attrs } from '@idle-strike/engine';
 import { hashSeed } from '../minigames/duelTarget';
 import { applyXp, attrCap } from '../progression/xp';
-import { db, notify, type CharacterRecord } from './db';
+import { colorFromNick, db, notify, type CharacterRecord, type PlayerColor } from './db';
 
 export const CHARACTER = {
   NICK_MIN: 3,
@@ -25,7 +25,6 @@ export const COUNTRIES: { code: string; name: string; flag: string }[] = [
   { code: 'UA', name: 'Ucrânia', flag: '🇺🇦' },
 ];
 
-export const AVATAR_COLORS = ['#ff6a1f', '#4c9df7', '#38d39f', '#f0a13a', '#c66bff', '#ff4a4a', '#ffd166', '#2ec4b6', '#e76f51', '#8ecae6', '#b5e48c', '#f72585'];
 
 export function validNick(nick: string): boolean {
   return nick.trim().length >= CHARACTER.NICK_MIN && nick.trim().length <= CHARACTER.NICK_MAX;
@@ -43,11 +42,13 @@ export async function getCharacter(): Promise<CharacterRecord | undefined> {
   return db.character.get(1);
 }
 
-export async function createCharacter(nick: string, avatar: number, country: string): Promise<CharacterRecord> {
+export async function createCharacter(nick: string, country: string, photo?: Blob): Promise<CharacterRecord> {
   const record: CharacterRecord = {
     id: 1,
     nick: nick.trim(),
-    avatar,
+    avatar: 0,
+    color: colorFromNick(nick),
+    ...(photo ? { photo } : {}),
     country,
     attrs: initialAttrs(nick),
     level: 0,
@@ -65,6 +66,22 @@ export async function createCharacter(nick: string, avatar: number, country: str
 export async function updateCharacter(patch: Partial<CharacterRecord>): Promise<void> {
   await db.character.update(1, patch);
   notify();
+}
+
+export async function setPhoto(photo: Blob | null): Promise<void> {
+  const c = await getCharacter();
+  if (!c) return;
+  if (photo) await db.character.put({ ...c, photo });
+  else {
+    const { photo: _drop, ...rest } = c;
+    void _drop;
+    await db.character.put(rest as CharacterRecord);
+  }
+  notify();
+}
+
+export async function setColor(color: PlayerColor): Promise<void> {
+  await updateCharacter({ color });
 }
 
 /** Adds XP, levels up, returns the levels reached. */

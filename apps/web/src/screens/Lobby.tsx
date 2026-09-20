@@ -64,7 +64,7 @@ export function Lobby() {
       <div className={ui.page}>
         <section className={`${ui.card} ${styles.hero}`}>
           <div className={styles.identity}>
-            <Avatar slot={c.avatar} nick={c.nick} size={64} />
+            <Avatar photo={c.photo ?? null} nick={c.nick} size={64} />
             <div className={styles.who}>
               <div className={styles.nick}>
                 {c.nick} <span className={styles.flag}>{flag}</span>

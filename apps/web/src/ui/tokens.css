@@ -19,6 +19,14 @@
   --t: #f0a13a;
   --t-soft: rgba(240, 161, 58, 0.18);
 
+  /* Player colours (allies in player view). Original values, not the CS palette. */
+  --p-yellow: #f2d94e;
+  --p-purple: #b57bff;
+  --p-green: #5bd97a;
+  --p-blue: #5aa9ff;
+  --p-orange: #ff9a3c;
+  --enemy: #ff4d4d;
+
   --danger: #ff4a4a;
   --ok: #38d39f;
   --warn: #ffd166;

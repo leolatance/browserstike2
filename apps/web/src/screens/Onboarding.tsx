@@ -5,7 +5,8 @@ import { createBox, openBox, rollInitialBox, type Reveal } from '../store/cards'
 import { BoxOpen } from '../ui/BoxOpen';
 import { useNavigate } from 'react-router-dom';
 import { attrCap } from '../progression/xp';
-import { AVATAR_COLORS, CHARACTER, COUNTRIES, createCharacter, initialAttrs, validNick } from '../store/character';
+import { CHARACTER, COUNTRIES, createCharacter, initialAttrs, validNick } from '../store/character';
+import { resizeToJpeg } from '../ui/photo';
 import { AttrBars } from '../ui/AttrBars';
 import { Avatar } from '../ui/Avatar';
 import ui from '../ui/ui.module.css';
@@ -14,17 +15,26 @@ import styles from './Onboarding.module.css';
 export function Onboarding() {
   const nav = useNavigate();
   const [nick, setNick] = useState('');
-  const [avatar, setAvatar] = useState(0);
+  const [photo, setPhoto] = useState<Blob | null>(null);
   const [country, setCountry] = useState('BR');
   const [busy, setBusy] = useState(false);
   const [reveals, setReveals] = useState<Reveal[] | null>(null);
   const attrs = useMemo(() => initialAttrs(nick || 'novato'), [nick]);
   const ok = validNick(nick);
 
+  const onFile = async (file?: File) => {
+    if (!file) return;
+    try {
+      setPhoto(await resizeToJpeg(file));
+    } catch {
+      setPhoto(null);
+    }
+  };
+
   const create = async () => {
     if (!ok || busy) return;
     setBusy(true);
-    await createCharacter(nick, avatar, country);
+    await createCharacter(nick, country, photo ?? undefined);
     // GDD 6.4: initial box, rolled from the nick so it is reproducible.
     const boxId = await createBox('initial', rollInitialBox(new Rng(hashSeed(`box:${nick.trim().toLowerCase()}`))));
     setReveals(await openBox(boxId));
@@ -59,14 +69,16 @@ export function Onboarding() {
       </section>
 
       <section className={ui.card}>
-        <span className={ui.h2}>Avatar</span>
-        <div className={styles.avatars}>
-          {AVATAR_COLORS.map((_, i) => (
-            <button key={i} className={styles.avatarBtn} aria-pressed={avatar === i} onClick={() => setAvatar(i)} aria-label={`Avatar ${i + 1}`}>
-              <Avatar slot={i} nick={nick} size={44} />
-            </button>
-          ))}
+        <span className={ui.h2}>Foto (opcional)</span>
+        <div className={ui.row}>
+          <Avatar photo={photo} nick={nick || '?'} size={56} />
+          <label className={styles.file}>
+            {photo ? 'trocar foto' : 'escolher foto'}
+            <input type="file" accept="image/*" onChange={(e) => void onFile(e.target.files?.[0])} />
+          </label>
+          {photo && <button onClick={() => setPhoto(null)}>remover</button>}
         </div>
+        <span className={ui.muted}>Sem foto, as iniciais do nick sobre uma cor fixa.</span>
       </section>
 
       <section className={ui.card}>

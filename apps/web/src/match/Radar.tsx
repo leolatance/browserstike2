@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { MapDef } from '@idle-strike/engine';
-import { snapshot, type RadarSnapshot } from './positions';
+import { snapshot, centroid, type RadarSnapshot } from './positions';
+import { cssColor, type ColorScheme } from './colors';
 import type { ReplayPlayer, RoundIndex } from './replay';
 import styles from './Radar.module.css';
 
@@ -9,6 +10,10 @@ interface Props {
   map: MapDef;
   /** Player id to highlight (the user's character). */
   highlight: string;
+  /** Dot colours (player view or HLTV). */
+  scheme: ColorScheme;
+  /** Hollow markers revealed at the end of a scenario (defender setup). */
+  ghosts?: { area: string; label?: string }[];
 }
 
 function cssVar(name: string): string {
@@ -16,7 +21,7 @@ function cssVar(name: string): string {
 }
 
 /** Canvas radar. Subscribes to the player directly so it draws every frame. */
-export function Radar({ player, map, highlight }: Props) {
+export function Radar({ player, map, highlight, scheme, ghosts }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
 
@@ -136,7 +141,7 @@ export function Radar({ player, map, highlight }: Props) {
         const a = dotOf.get(d.attacker);
         const b = dotOf.get(d.defender);
         if (!a || !b) continue;
-        ctx.strokeStyle = d.side === 'CT' ? c.ct : c.t;
+        ctx.strokeStyle = cssColor(scheme.of(d.attacker));
         ctx.lineWidth = 1;
         ctx.globalAlpha = 0.9;
         ctx.beginPath();
@@ -152,7 +157,7 @@ export function Radar({ player, map, highlight }: Props) {
       // Dead first so the X marks never hide a living dot.
       const ordered = [...snap.players.filter((p) => !p.alive), ...snap.players.filter((p) => p.alive)];
       for (const p of ordered) {
-        const color = p.side === 'CT' ? c.ct : c.t;
+        const color = cssColor(scheme.of(p.id));
         const x = P(p.x);
         const y = P(p.y);
         if (!p.alive) {
@@ -204,6 +209,24 @@ export function Radar({ player, map, highlight }: Props) {
           ctx.fillStyle = c.text;
           ctx.font = `600 ${Math.max(9, size * 0.022)}px ${cssVar('--font')}`;
           ctx.fillText(p.nick, x, y - r - size * 0.02);
+        }
+      }
+      // Ghosts: where the defenders really were (scenario reveal).
+      if (ghosts) {
+        for (const g of ghosts) {
+          const gc = centroid(map, g.area);
+          ctx.strokeStyle = c.danger;
+          ctx.lineWidth = 2;
+          ctx.setLineDash([4, 3]);
+          ctx.beginPath();
+          ctx.arc(P(gc.x), P(gc.y), r * 1.8, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          if (g.label) {
+            ctx.fillStyle = c.danger;
+            ctx.font = `700 ${Math.max(9, size * 0.024)}px ${cssVar('--font')}`;
+            ctx.fillText(g.label, P(gc.x), P(gc.y) - r * 2.4);
+          }
         }
       }
       lastDots = snap.players.map((p) => ({ id: p.id, x: P(p.x), y: P(p.y), alive: p.alive }));
@@ -261,7 +284,7 @@ export function Radar({ player, map, highlight }: Props) {
       canvas.removeEventListener('pointerdown', onDown);
       canvas.removeEventListener('pointerleave', onLeave);
     };
-  }, [player, map, highlight]);
+  }, [player, map, highlight, scheme, ghosts]);
 
   return (
     <div ref={wrapRef} className={styles.wrap}>

@@ -8,6 +8,9 @@ export interface FeedEntry {
   victimNick: string;
   attackerSide: Side;
   victimSide: Side;
+  /** CSS colours (player view or HLTV). */
+  attackerColor?: string;
+  victimColor?: string;
   /** Nick of the assisting teammate, if any. */
   assist?: string;
   /** Nick of the flash assister, if any. */
@@ -18,9 +21,9 @@ export function KillFeed({ entries }: { entries: FeedEntry[] }) {
   return (
     <div className={styles.feed} aria-live="polite">
       {entries.length === 0 && <div className={styles.empty}>Sem kills ainda neste round</div>}
-      {entries.map(({ kill, attackerNick, victimNick, attackerSide, victimSide, assist, flashAssist }) => (
+      {entries.map(({ kill, attackerNick, victimNick, attackerSide, victimSide, attackerColor, victimColor, assist, flashAssist }) => (
         <div key={`${kill.round}-${kill.t}-${kill.victim}`} className={styles.row}>
-          <span className={attackerSide === 'CT' ? styles.ct : styles.t}>
+          <span className={attackerSide === 'CT' ? styles.ct : styles.t} style={attackerColor ? { color: attackerColor } : undefined}>
             {attackerNick}
             {assist && <span className={styles.assist}> +{assist}</span>}
             {flashAssist && <span className={styles.assist}> +{flashAssist}⚡</span>}
@@ -30,7 +33,9 @@ export function KillFeed({ entries }: { entries: FeedEntry[] }) {
             {kill.headshot && <span className={styles.tag}>HS</span>}
             {kill.trade && <span className={styles.tag}>trade</span>}
           </span>
-          <span className={victimSide === 'CT' ? styles.ct : styles.t}>{victimNick}</span>
+          <span className={victimSide === 'CT' ? styles.ct : styles.t} style={victimColor ? { color: victimColor } : undefined}>
+            {victimNick}
+          </span>
         </div>
       ))}
     </div>

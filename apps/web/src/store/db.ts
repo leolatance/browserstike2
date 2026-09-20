@@ -19,6 +19,20 @@ export interface CharacterRecord {
   build: EquippedCard[];
   /** Dust from extra copies beyond level III (v3). Craft comes later. */
   dust: number;
+  /** Profile photo, 256×256 JPEG (v4). */
+  photo?: Blob;
+  /** Player colour (CS rule: 5 fixed colours; v4). */
+  color: PlayerColor;
+}
+
+export type PlayerColor = 'yellow' | 'purple' | 'green' | 'blue' | 'orange';
+export const PLAYER_COLORS: PlayerColor[] = ['yellow', 'purple', 'green', 'blue', 'orange'];
+
+/** Default colour from the nick (stable). */
+export function colorFromNick(nick: string): PlayerColor {
+  let h = 0;
+  for (const ch of nick.toLowerCase()) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return PLAYER_COLORS[h % PLAYER_COLORS.length] as PlayerColor;
 }
 
 export interface CardRecord {
@@ -121,6 +135,17 @@ export class IdleStrikeDB extends Dexie {
           .toCollection()
           .modify((c: Partial<CharacterRecord>) => {
             c.dust ??= 0;
+          }),
+      );
+    // v4: profile photo (blob) and player colour.
+    this.version(4)
+      .stores({})
+      .upgrade((tx) =>
+        tx
+          .table('character')
+          .toCollection()
+          .modify((c: Partial<CharacterRecord>) => {
+            c.color ??= colorFromNick(c.nick ?? '');
           }),
       );
   }

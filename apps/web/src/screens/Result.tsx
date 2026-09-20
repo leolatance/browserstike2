@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { CLASS_LABEL, Rng, card, displayRating, hasCard, resolveBuild } from '@idle-strike/engine';
 import { createBox, openBox, rollMatchBox, type Reveal } from '../store/cards';
 import { BoxOpen } from '../ui/BoxOpen';
+import { Avatar } from '../ui/Avatar';
+import { useQuery } from '../store/useQuery';
 import { attrCap, matchXp, xpForLevel, type MatchXpBreakdown } from '../progression/xp';
 import { getCharacter, grantXp } from '../store/character';
 import { saveMatch } from '../store/matches';
@@ -29,6 +31,7 @@ export function Result() {
   const [p, setP] = useState<Persisted | null>(null);
   const [reveals, setReveals] = useState<Reveal[] | null>(null);
   const started = useRef(false);
+  const { data: me } = useQuery(getCharacter);
 
   useEffect(() => {
     if (!outcome) {
@@ -91,7 +94,10 @@ export function Result() {
     <Shell title="Resultado">
       <div className={ui.page}>
         <section className={`${ui.card} ${won ? styles.win : styles.loss}`}>
-          <span className={ui.h2}>{won ? 'Vitória' : 'Derrota'}</span>
+          <div className={ui.row}>
+            {me && <Avatar photo={me.photo ?? null} nick={me.nick} size={36} />}
+            <span className={ui.h2}>{won ? 'Vitória' : 'Derrota'}</span>
+          </div>
           <div className={`${styles.score} mono`}>
             {log.score[source.myTeam]} – {log.score[other]}
             <span className={styles.opp}> vs {log.teams[other].name}</span>

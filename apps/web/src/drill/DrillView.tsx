@@ -6,6 +6,8 @@ import { clock } from '../match/format';
 import { useReplay } from '../match/useReplay';
 import { DuelTargetGame, type DuelTargetStats } from '../minigames/duelTarget';
 import { DuelTargetPanel } from '../minigames/DuelTargetPanel';
+import { colorScheme } from '../match/colors';
+import type { PlayerColor } from '../store/db';
 import styles from './DrillView.module.css';
 
 export interface FocusBar {
@@ -33,12 +35,16 @@ interface Props {
   overlay?: ReactNode;
   /** Scoreboard replacement: kills per player. */
   showKills?: boolean;
+  myColor: PlayerColor;
+  /** Revealed defender positions (scenario end). */
+  ghosts?: { area: string; label?: string }[];
 }
 
 /** Match screen for drills: radar, feed, kills board, optional minigame, focus bar. */
-export function DrillView({ log, me, title, subtitle, rate = 1, minigame, game, onMiniStats, onMyKills, onFinish, focus, overlay, showKills = true }: Props) {
+export function DrillView({ log, me, title, subtitle, rate = 1, minigame, game, onMiniStats, onMyKills, onFinish, focus, overlay, showKills = true, myColor, ghosts }: Props) {
   const { player, state } = useReplay(log, { rate, hold: 2 });
   const ri = player.rounds[0]!;
+  const scheme = useMemo(() => colorScheme(log, 'player', me, 0, myColor, ri.start.sides), [log, me, myColor, ri.start.sides]);
   const t = state.t;
   const finished = useRef(false);
   useEffect(() => {
@@ -64,7 +70,7 @@ export function DrillView({ log, me, title, subtitle, rate = 1, minigame, game, 
   const feed: FeedEntry[] = kills
     .slice(-6)
     .reverse()
-    .map((kill) => ({ kill, attackerNick: nickOf.get(kill.attacker) ?? kill.attacker, victimNick: nickOf.get(kill.victim) ?? kill.victim, attackerSide: sideOf(kill.attacker), victimSide: sideOf(kill.victim) }));
+    .map((kill) => ({ kill, attackerNick: nickOf.get(kill.attacker) ?? kill.attacker, victimNick: nickOf.get(kill.victim) ?? kill.victim, attackerSide: sideOf(kill.attacker), victimSide: sideOf(kill.victim), attackerColor: scheme.of(kill.attacker), victimColor: scheme.of(kill.victim) }));
   const board = log.teams
     .flatMap((tm) => tm.players)
     .map((p) => ({ id: p.id, nick: p.nick, side: sideOf(p.id), k: kills.filter((x) => x.attacker === p.id).length, d: kills.filter((x) => x.victim === p.id).length }))
@@ -94,7 +100,7 @@ export function DrillView({ log, me, title, subtitle, rate = 1, minigame, game, 
         )}
       </header>
       <div className={styles.radarWrap}>
-        <Radar player={player} map={MAP01} highlight={me} />
+        <Radar player={player} map={MAP01} highlight={me} scheme={scheme} ghosts={ghosts} />
         {overlay && <div className={styles.overlay}>{overlay}</div>}
         {!state.playing && !state.finished && !overlay && <div className={styles.paused}>pausado</div>}
       </div>
@@ -119,7 +125,7 @@ export function DrillView({ log, me, title, subtitle, rate = 1, minigame, game, 
               <tbody>
                 {board.map((r) => (
                   <tr key={r.id} className={r.id === me ? styles.me : ''}>
-                    <td className={r.side === 'CT' ? 'ct' : 't'}>{r.nick}</td>
+                    <td style={{ color: scheme.of(r.id) }}>{r.nick}</td>
                     <td className="mono">{r.k}</td>
                     <td className={`mono ${styles.d}`}>{r.d}</td>
                   </tr>

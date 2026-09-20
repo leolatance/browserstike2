@@ -1,6 +1,6 @@
 # Idle Strike 2 — Game Design Document
 
-Versão 0.3 — 20/09/2026. Documento vivo. Números marcados com `[v0]` são valores iniciais de balanceamento e devem ser ajustados via simulação em massa. Números marcados com `[v1]` já passaram pelo `test/balance.test.ts` (5.000 partidas por cenário) e são os que estão no código.
+Versão 0.4 — 20/09/2026. Documento vivo. Números marcados com `[v0]` são valores iniciais de balanceamento e devem ser ajustados via simulação em massa. Números marcados com `[v1]` já passaram pelo `test/balance.test.ts` (5.000 partidas por cenário) e são os que estão no código.
 
 ---
 
@@ -47,7 +47,8 @@ inventário: cartas → build, cosméticos → equipar/coleção
 ## 3. O boneco
 
 ### 3.1 Identidade
-- Nick, avatar (escolha de retrato original), país/bandeira, mão (cosmético).
+- Nick, foto de perfil, país/bandeira, mão (cosmético). `[v1]` **Foto**: upload no onboarding e no perfil, redimensionada a 256×256 (JPEG ~0,8) e guardada como blob no Dexie; sem foto, iniciais do nick sobre uma cor sólida derivada do nick. Não há mais avatares pré-desenhados.
+- `[v1]` **Cor do jogador** (regra do CS): 5 cores fixas — amarelo, roxo, verde, azul, laranja (tokens `--p-*`, valores próprios) — escolhida no perfil, padrão pela seed do nick, salva em `character.color`. No solo nunca há colisão; na Fase 2, dois iguais no mesmo time → um randomiza entre as restantes.
 - Nível (XP) — 0 a 50 `[v0]`. Desbloqueia slots de carta, modos, caps de atributo.
 - Patente — MMR online, faixas estilo CS/FACEIT (10 níveis `[v0]`). Reseta por temporada.
 - Rating de carreira — acumula. Rating recente (últimos 10 jogos) define **forma**.
@@ -300,6 +301,8 @@ Bônus de conjunto `[v1]` (como está no código):
 
 ## 7. Cosméticos
 
+`[v1]` Só skins precisam de arte gerada; foto de perfil, cores de jogador, ícones de arma (silhuetas), molduras de carta e radar são código.
+
 - Categorias: skin de arma (por arma), luvas, agente (retrato), fundo de perfil, badge, kill feed style, card back.
 - Raridade mesma escala. Duplicata → pó → craft (Fase 3).
 - **Palco**: skin equipada aparece no kill feed (`nick [AK | skin]`), no scoreboard (ícone), no perfil (showcase até 6 itens).
@@ -369,6 +372,7 @@ Layout mobile-first (vertical), reorganiza em desktop:
 └──────────────────────────────┘
 ```
 
+- `[v1]` **Radar em visão do jogador**: aliados nas 5 cores (o boneco na cor dele, bots nas 4 restantes) e inimigos todos em vermelho; mesma paleta no kill feed (nome) e no scoreboard (bolinha). O header mantém CT/T só como rótulo de lado. Toggle "visão: jogador | HLTV" (azul/laranja): padrão jogador na partida da queue e nos drills, HLTV no replay e em dev.
 - Reprodução do log: normal (round ≈ 15–20s), 2x, pular pro fim. Pausa.
 - Resultado já está decidido no início; a tela só desenrola.
 - Eventos de round destacados: pistol, eco, force, clutch, ace, plant/defuse.
@@ -391,7 +395,11 @@ Sequência de alvos no ritmo da partida (eco = calmo, retake = intenso).
 Top-down mini-arena, controla um bonequinho, alvo = bots. Usado no Deathmatch.
 
 ### 10.4 Treino
-Mira → alvos; Utilitária → acertar o ponto de lineup; Movimentação → sequência de teclas/toque; Peek → timing (clicar no momento certo); Tático → escolha rápida entre 3 opções de call.
+`[v1]` Treino e DM são **simulação assistível** com a mesma regra da partida (log determinístico, minigame opcional que só altera o ganho). Motor em `packages/engine/src/drill.ts`.
+- **DM** (3 min, tempo real): 5x5 com respawn de 3s, sem economia nem bomba; a barra sobe a cada kill do boneco (ganho da sessão dividido pelos kills do log). ~27 duelos do boneco por sessão (faixa 25–40).
+- **Treino** (2 min): 5 cenários encadeados no radar com título e resultado ("venceu · 3/5 duelos · 20s"). Cadeias por foco: Mira 4× Aim 1v1 + Rush + Retake; Peek 3× Peek + Rush + Execute; Mov Peek/Rush/Aim/Peek/Retake; Tático 5 retakes com **call em 5s** (padrão/flanco/agressivo) contra um setup escondido, revelado no radar por 2s no fim; Util 4 executes com **lineup** (tocar o ponto do site em 1,5s) + Rush. A barra do foco sobe por cenário; o multiplicador (1,0–1,5) vem do alvo (Mira/Peek/Mov), das calls certas (Tático) ou da média dos lineups (Util). Sem interação = ×1,0.
+- Duelos do boneco por sessão (boneco lvl 0): Mira 17,5 · Peek 17,5 · Mov 17,5 · Tático 6,2 · Util 6,4 (faixa desejada 15–25 para os focos com alvo).
+- Rush/execute são drill de contato: sem plant.
 
 ---
 

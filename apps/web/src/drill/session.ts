@@ -6,7 +6,7 @@ import type { CharacterRecord } from '../store/db';
 export const CHAIN: Record<AttrKey, ScenarioKind[]> = {
   mira: ['aim1v1', 'aim1v1', 'rush', 'aim1v1', 'retake2v2', 'aim1v1'],
   peek: ['peek', 'peek', 'rush', 'peek', 'execute', 'peek'],
-  mov: ['peek', 'rush', 'aim1v1', 'retake2v2', 'rush', 'peek'],
+  mov: ['peek', 'rush', 'aim1v1', 'peek', 'retake2v2', 'peek'],
   tatico: ['retake2v2', 'retake3v2', 'retake2v2', 'retake3v2', 'retake2v2'],
   util: ['execute', 'execute', 'rush', 'execute', 'execute'],
   mental: ['aim1v1'],

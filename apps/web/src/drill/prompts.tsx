@@ -71,6 +71,7 @@ export function LineupPrompt({ site, onDone }: { site: SiteId; onDone: (score: n
     let raf = 0;
     const startAt = performance.now() + 700;
     let spawned = false;
+    let hit: { x: number; y: number; score: number; at: number } | null = null;
     const css = (v: string) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
     const draw = () => {
       ctx.clearRect(0, 0, size, size);
@@ -104,10 +105,18 @@ export function LineupPrompt({ site, onDone }: { site: SiteId; onDone: (score: n
         ctx.arc(tg.x * size, tg.y * size, 4, 0, Math.PI * 2);
         ctx.fill();
       }
-      if (game.tick(now) && !done.current) {
+      if (hit) {
+        ctx.fillStyle = hit.score > 0 ? css('--ok') : css('--danger');
+        ctx.font = `800 18px ${css('--mono')}`;
+        ctx.textAlign = 'center';
+        ctx.fillText(hit.score > 0 ? `+${hit.score}` : 'x', hit.x, hit.y - 12 - (now - hit.at) / 30);
+        if (now - hit.at > 600) {
+          onDone(hit.score);
+          return;
+        }
+      } else if (game.tick(now) && !done.current) {
         done.current = true;
-        onDone(0);
-        return;
+        hit = { x: tg ? tg.x * size : size / 2, y: tg ? tg.y * size : size / 2, score: 0, at: now };
       }
       raf = requestAnimationFrame(draw);
     };
@@ -120,7 +129,7 @@ export function LineupPrompt({ site, onDone }: { site: SiteId; onDone: (score: n
       const res = game.pointer(d, performance.now());
       if (res) {
         done.current = true;
-        onDone(res.score);
+        hit = { x: ev.clientX - rect.left, y: ev.clientY - rect.top, score: res.score, at: performance.now() };
       }
     };
     canvas.addEventListener('pointerdown', onPointer);

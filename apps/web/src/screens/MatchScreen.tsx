@@ -26,6 +26,9 @@ import { getMatch, saveMatch } from '../store/matches';
 import { getCharacter } from '../store/character';
 import { getOutcome, peekPendingMatch, setOutcome, setPendingMatch, type MatchSource } from '../store/pending';
 import { getSetting, setSetting } from '../store/settings';
+import { colorScheme, type ViewMode } from '../match/colors';
+import { colorFromNick, type PlayerColor } from '../store/db';
+import { Avatar } from '../ui/Avatar';
 import { DuelTargetPanel } from '../minigames/DuelTargetPanel';
 import styles from './MatchScreen.module.css';
 
@@ -88,6 +91,17 @@ function MatchView({ source }: { source: MatchSource }) {
   const { player, state } = useReplay(log);
   // Dev-only hook so the log can be inspected from the browser console.
   const ri = player.rounds[state.roundIdx] ?? player.rounds[0]!;
+
+  // Radar colours: player view by default in a queue match, HLTV in replays/dev.
+  const [viewMode, setViewMode] = useState<ViewMode>(source.kind === 'queue' ? 'player' : 'hltv');
+  const [profile, setProfile] = useState<{ color: PlayerColor; photo: Blob | null; nick: string } | null>(null);
+  useEffect(() => {
+    getCharacter().then((c) => c && setProfile({ color: c.color ?? colorFromNick(c.nick), photo: c.photo ?? null, nick: c.nick }));
+  }, []);
+  const scheme = useMemo(
+    () => colorScheme(log, viewMode, MY_PLAYER, source.myTeam, profile?.color ?? 'yellow', ri.start.sides),
+    [log, viewMode, MY_PLAYER, source.myTeam, profile, ri.start.sides],
+  );
   const t = state.t;
   const freezeEnd = ri.start.freezetimeEnd;
   const inFreezetime = t < freezeEnd;
@@ -132,6 +146,8 @@ function MatchView({ source }: { source: MatchSource }) {
         victimNick: nickOf.get(kill.victim) ?? kill.victim,
         attackerSide: sideOf(kill.attacker),
         victimSide: sideOf(kill.victim),
+        attackerColor: scheme.of(kill.attacker),
+        victimColor: scheme.of(kill.victim),
       };
       if (assist && isEvent(assist, 'assist')) entry.assist = nickOf.get(assist.player) ?? assist.player;
       if (flashAssist && isEvent(flashAssist, 'flashAssist')) entry.flashAssist = nickOf.get(flashAssist.player) ?? flashAssist.player;
@@ -249,11 +265,12 @@ function MatchView({ source }: { source: MatchSource }) {
           defuse={defuse}
           minigame={{ enabled: minigameOn, onToggle: () => setMinigameOn(!minigameOn) }}
           notice={notice}
+          view={{ mode: viewMode, onToggle: () => setViewMode((m) => (m === 'player' ? 'hltv' : 'player')) }}
         />
       </div>
       <div className={styles.radarArea}>
         <div className={styles.radarWrap}>
-          <Radar player={player} map={MAP01} highlight={MY_PLAYER} />
+          <Radar player={player} map={MAP01} highlight={MY_PLAYER} scheme={scheme} />
           {inFreezetime && <Loadout rows={loadout} secondsLeft={freezeEnd - t} />}
         </div>
         <div className={styles.controls}>
@@ -281,7 +298,13 @@ function MatchView({ source }: { source: MatchSource }) {
         <KillFeed entries={feed} />
       </div>
       <div className={styles.boardArea}>
-        <Scoreboard rows={rows} teamNames={teamNames} highlight={MY_PLAYER} />
+        <Scoreboard
+          rows={rows}
+          teamNames={teamNames}
+          highlight={MY_PLAYER}
+          colorOf={scheme.of}
+          avatar={source.kind !== 'dev' && profile ? <span style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: 6 }}><Avatar photo={profile.photo} nick={profile.nick} size={18} /></span> : undefined}
+        />
       </div>
       {state.finished && (
         <EndScreen

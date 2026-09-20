@@ -30,6 +30,13 @@
   border-left-color: var(--danger) !important;
 }
 
+.reveal {
+  color: var(--enemy);
+  font-weight: 800;
+  font-size: 20px;
+  text-shadow: 0 0 12px rgba(0, 0, 0, 0.8);
+}
+
 .center {
   display: flex;
   justify-content: center;
