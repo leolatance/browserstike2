@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { displayRating } from '@idle-strike/engine';
+import { CLASS_LABEL, Rng, card, displayRating, hasCard, resolveBuild } from '@idle-strike/engine';
+import { createBox, openBox, rollMatchBox, type Reveal } from '../store/cards';
+import { BoxOpen } from '../ui/BoxOpen';
 import { attrCap, matchXp, xpForLevel, type MatchXpBreakdown } from '../progression/xp';
 import { getCharacter, grantXp } from '../store/character';
 import { saveMatch } from '../store/matches';
@@ -10,6 +12,7 @@ import ui from '../ui/ui.module.css';
 import styles from './Result.module.css';
 
 interface Persisted {
+  boxId: number | null;
   xp: MatchXpBreakdown;
   levelFrom: number;
   levelTo: number;
@@ -24,6 +27,7 @@ export function Result() {
   const nav = useNavigate();
   const outcome = getOutcome();
   const [p, setP] = useState<Persisted | null>(null);
+  const [reveals, setReveals] = useState<Reveal[] | null>(null);
   const started = useRef(false);
 
   useEffect(() => {
@@ -42,7 +46,7 @@ export function Result() {
         const won = log.winner === source.myTeam;
         const xp = matchXp({ won, rating: stats.rating, minigameAvg: minigame ? minigame.average : null, mode: 'solo' });
         if (outcome.savedId !== undefined) {
-          return { xp, levelFrom: c.level, levelTo: c.level, xpNow: c.xp, reached: [] };
+          return { boxId: null, xp, levelFrom: c.level, levelTo: c.level, xpNow: c.xp, reached: [] };
         }
         const levelFrom = c.level;
         const next = await grantXp(xp.xp);
@@ -60,7 +64,9 @@ export function Result() {
         });
         setOutcome({ ...outcome, savedId: id });
         setPendingMatch(null);
-        return { xp, levelFrom, levelTo: next.level, xpNow: next.xp, reached: next.reached };
+        // GDD 8.1: one box per solo match, rolled from the match seed.
+        const boxId = await createBox('match', rollMatchBox(new Rng((source.seed ^ 0x9e3779b9) >>> 0)));
+        return { boxId, xp, levelFrom, levelTo: next.level, xpNow: next.xp, reached: next.reached };
       })();
       saving.finally(() => {
         saving = null;
@@ -76,6 +82,9 @@ export function Result() {
   const other = source.myTeam === 0 ? 1 : 0;
   const teamRank = log.stats.filter((s) => s.team === source.myTeam).sort((a, b) => b.rating - a.rating).findIndex((s) => s.id === source.myId) + 1;
   const isMvp = log.stats.slice().sort((a, b) => b.rating - a.rating)[0]?.id === source.myId;
+  const played = resolveBuild(source.config.teams[source.myTeam].players.find((pl) => pl.id === source.myId)?.build ?? { cards: [] });
+  const triggers = Object.entries(stats.cardTriggers ?? {}).sort((a, b) => b[1] - a[1]);
+  const triggerLabel = (id: string) => (hasCard(id) ? card(id).name : id.startsWith('set:') ? `conjunto ${CLASS_LABEL[id.slice(4) as keyof typeof CLASS_LABEL] ?? id}` : id);
   const context = isMvp ? 'MVP da partida' : teamRank === 1 ? 'top do seu time' : teamRank <= 3 ? `${teamRank}º do seu time` : `carregado: ${teamRank}º do time`;
 
   return (
@@ -88,6 +97,10 @@ export function Result() {
             <span className={styles.opp}> vs {log.teams[other].name}</span>
           </div>
           <div className={isMvp || teamRank === 1 ? styles.contextGood : ui.muted}>{context}</div>
+          <div className={ui.muted}>
+            jogou de <b>{CLASS_LABEL[played.activeClass]}</b>
+            {played.sets.length > 1 ? ` (híbrido ${played.sets.map((s) => CLASS_LABEL[s]).join(' + ')})` : ''}
+          </div>
         </section>
 
         <section className={ui.grid3}>
@@ -118,6 +131,18 @@ export function Result() {
             <span>rating</span>
           </div>
         </section>
+
+        {triggers.length > 0 && (
+          <section className={ui.card}>
+            <span className={ui.h2}>Cartas que dispararam</span>
+            {triggers.map(([id, n]) => (
+              <div key={id} className={ui.row}>
+                <span>{triggerLabel(id)}</span>
+                <b className="mono">{n}×</b>
+              </div>
+            ))}
+          </section>
+        )}
 
         {minigame && (
           <section className={ui.card}>
@@ -154,7 +179,12 @@ export function Result() {
                   lvl {p.levelTo} · {p.xpNow}/{xpForLevel(p.levelTo)} xp
                 </div>
               )}
-              <div className={ui.muted}>Box de cartas: em breve.</div>
+              {p.boxId !== null && !reveals && (
+                <button className="primary" onClick={() => void openBox(p.boxId as number).then(setReveals)}>
+                  Abrir box de cartas
+                </button>
+              )}
+              {reveals && <BoxOpen reveals={reveals} onDone={() => setReveals(null)} />}
             </>
           ) : (
             <div className={ui.muted}>salvando…</div>

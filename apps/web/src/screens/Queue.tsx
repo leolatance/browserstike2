@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BOT_TEAM_NAMES, MAP01, Rng, averageAttr, generateBotTeam, makePlayer, type PlayerClass, type Team } from '@idle-strike/engine';
 import { getCharacter } from '../store/character';
+import { currentBuild } from '../store/cards';
+import { resolveBuild } from '@idle-strike/engine';
 import { career, formMultiplier } from '../store/matches';
 import { setPendingMatch } from '../store/pending';
 import { Shell } from '../ui/Shell';
@@ -33,11 +35,13 @@ export function Queue() {
       const c = await getCharacter();
       if (!c) return;
       const cs = await career();
+      const build = { cards: await currentBuild() };
       const seed = Math.floor(Math.random() * 2 ** 31);
       const rng = new Rng(seed);
       const avg = averageAttr(c.attrs);
       const names = rng.shuffle(BOT_TEAM_NAMES);
-      const me = makePlayer('a1', c.nick, c.class, c.attrs, formMultiplier(cs.form));
+      const me = makePlayer('a1', c.nick, resolveBuild(build).activeClass, c.attrs, formMultiplier(cs.form));
+      me.build = build;
       const mates = generateBotTeam({ rng, targetAvg: avg, idPrefix: 'x', classes: TEAMMATE_CLASSES, name: names[0] });
       const teamA: Team = {
         id: 'a',

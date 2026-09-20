@@ -1,0 +1,88 @@
+.box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 14px;
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-2);
+}
+
+.stage {
+  width: 200px;
+  min-height: 150px;
+  perspective: 800px;
+}
+
+.back {
+  height: 150px;
+  border-radius: 8px;
+  border: 2px dashed var(--line-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-2);
+  font-size: 12px;
+  background: repeating-linear-gradient(45deg, var(--bg-2) 0 8px, var(--bg-1) 8px 16px);
+}
+
+.flip {
+  animation: reveal 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+@keyframes reveal {
+  from {
+    transform: rotateY(90deg) scale(0.8);
+    opacity: 0;
+  }
+  to {
+    transform: rotateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.levelup {
+  color: var(--ok);
+  font-weight: 700;
+}
+
+.muted {
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+.hint {
+  color: var(--text-2);
+  font-size: 11px;
+}
+
+.dots {
+  display: flex;
+  gap: 5px;
+}
+
+.dots i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.dotOff {
+  background: var(--bg-3);
+}
+
+.dotOn {
+  background: var(--accent);
+}

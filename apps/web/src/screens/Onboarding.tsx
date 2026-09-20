@@ -1,4 +1,8 @@
 import { useMemo, useState } from 'react';
+import { Rng } from '@idle-strike/engine';
+import { hashSeed } from '../minigames/duelTarget';
+import { createBox, openBox, rollInitialBox, type Reveal } from '../store/cards';
+import { BoxOpen } from '../ui/BoxOpen';
 import { useNavigate } from 'react-router-dom';
 import { attrCap } from '../progression/xp';
 import { AVATAR_COLORS, CHARACTER, COUNTRIES, createCharacter, initialAttrs, validNick } from '../store/character';
@@ -13,6 +17,7 @@ export function Onboarding() {
   const [avatar, setAvatar] = useState(0);
   const [country, setCountry] = useState('BR');
   const [busy, setBusy] = useState(false);
+  const [reveals, setReveals] = useState<Reveal[] | null>(null);
   const attrs = useMemo(() => initialAttrs(nick || 'novato'), [nick]);
   const ok = validNick(nick);
 
@@ -20,8 +25,19 @@ export function Onboarding() {
     if (!ok || busy) return;
     setBusy(true);
     await createCharacter(nick, avatar, country);
-    nav('/lobby', { replace: true });
+    // GDD 6.4: initial box, rolled from the nick so it is reproducible.
+    const boxId = await createBox('initial', rollInitialBox(new Rng(hashSeed(`box:${nick.trim().toLowerCase()}`))));
+    setReveals(await openBox(boxId));
   };
+
+  if (reveals) {
+    return (
+      <div className={ui.page}>
+        <h1 className={ui.h1}>Box inicial</h1>
+        <BoxOpen reveals={reveals} title="Box inicial" onDone={() => nav('/build', { replace: true })} />
+      </div>
+    );
+  }
 
   return (
     <div className={ui.page}>

@@ -54,6 +54,7 @@ export async function createCharacter(nick: string, avatar: number, country: str
     xp: 0,
     class: 'rifler',
     createdAt: Date.now(),
+    build: [],
   };
   await db.character.put(record);
   notify();

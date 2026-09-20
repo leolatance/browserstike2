@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ATTR_KEYS, type Attrs } from '@idle-strike/engine';
+import { ATTR_KEYS, CLASS_LABEL, resolveBuild, type Attrs } from '@idle-strike/engine';
+import { currentBuild, unopenedBoxes } from '../store/cards';
 import { getSetting, setSetting, type LastSeen } from '../store/settings';
 import { sessionsToday } from '../store/training';
 import { dailyYield } from '../progression/training';
@@ -23,6 +24,8 @@ export function Lobby() {
   const { data: c } = useQuery(getCharacter);
   const { data: cs } = useQuery(career);
   const { data: today } = useQuery(sessionsToday);
+  const { data: build } = useQuery(currentBuild);
+  const { data: boxes } = useQuery(unopenedBoxes);
   const [changes, setChanges] = useState<Changes | null>(null);
   const snapped = useRef(false);
 
@@ -66,7 +69,7 @@ export function Lobby() {
               <div className={styles.nick}>
                 {c.nick} <span className={styles.flag}>{flag}</span>
               </div>
-              <div className={ui.muted}>sem patente · Rifler</div>
+              <div className={ui.muted}>sem patente · {CLASS_LABEL[resolveBuild({ cards: build ?? [] }).activeClass]}</div>
               {changes?.level && (
                 <div className={styles.changed}>
                   nível {changes.level[0]} → {changes.level[1]} · cap {attrCap(changes.level[1]).toFixed(1)}
@@ -120,6 +123,14 @@ export function Lobby() {
             <b>Queue online</b>
             <span>Fase 2</span>
           </div>
+          <Link to="/build" className={styles.action}>
+            <b>Build</b>
+            <span>{build?.length ?? 0} cartas equipadas</span>
+          </Link>
+          <Link to="/inventario" className={`${styles.action} ${boxes?.length ? styles.attention : ''}`}>
+            <b>Box de cartas</b>
+            <span>{boxes?.length ? `${boxes.length} não ${boxes.length === 1 ? 'aberta' : 'abertas'}` : 'nenhuma pendente'}</span>
+          </Link>
           <Link to="/perfil" className={styles.action}>
             <b>Perfil</b>
             <span>carreira e histórico</span>

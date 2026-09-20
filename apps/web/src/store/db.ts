@@ -2,7 +2,7 @@
  * Local persistence (GDD 14, Fase 1). Dexie / IndexedDB, versioned from day one.
  */
 import Dexie, { type Table } from 'dexie';
-import type { Attrs, PlayerClass, PlayerStats, Team } from '@idle-strike/engine';
+import type { Attrs, CardId, CardLevel, EquippedCard, PlayerClass, PlayerStats, Team } from '@idle-strike/engine';
 import type { DuelTargetStats } from '../minigames/duelTarget';
 
 export interface CharacterRecord {
@@ -15,6 +15,25 @@ export interface CharacterRecord {
   xp: number;
   class: PlayerClass;
   createdAt: number;
+  /** Equipped cards in slot order (v2). */
+  build: EquippedCard[];
+}
+
+export interface CardRecord {
+  id: CardId;
+  /** Copies beyond level III (dust later). */
+  qty: number;
+  level: CardLevel;
+  acquiredAt: number;
+}
+
+export interface BoxRecord {
+  id?: number;
+  source: 'initial' | 'match';
+  createdAt: number;
+  /** Pre-rolled contents (deterministic per match seed). */
+  cards: CardId[];
+  opened: boolean;
 }
 
 export interface MatchRecord {
@@ -62,6 +81,8 @@ export class IdleStrikeDB extends Dexie {
   matches!: Table<MatchRecord, number>;
   training!: Table<TrainingRecord, number>;
   settings!: Table<SettingsRecord, string>;
+  cards!: Table<CardRecord, string>;
+  boxes!: Table<BoxRecord, number>;
 
   constructor() {
     super('idle-strike-2');
@@ -71,6 +92,24 @@ export class IdleStrikeDB extends Dexie {
       training: '++id, day, startedAt',
       settings: 'key',
     });
+    // v2 (GDD 6): card inventory, boxes, and the build on the character.
+    this.version(2)
+      .stores({
+        character: 'id',
+        matches: '++id, playedAt',
+        training: '++id, day, startedAt',
+        settings: 'key',
+        cards: 'id',
+        boxes: '++id, createdAt, opened',
+      })
+      .upgrade((tx) =>
+        tx
+          .table('character')
+          .toCollection()
+          .modify((c: Partial<CharacterRecord>) => {
+            c.build ??= [];
+          }),
+      );
   }
 }
 
