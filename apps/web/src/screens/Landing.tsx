@@ -7,6 +7,7 @@ import { Radar } from '../match/Radar';
 import { ReplayPlayer } from '../match/replay';
 import { fetchLadder, fetchMyMmr, type LadderRow } from '../store/online';
 import { cloudEnabled } from '../store/supabase';
+import { fetchLadderX1 } from '../x1/online';
 import { RankIcon } from '../ui/RankIcon';
 import styles from './Landing.module.css';
 
@@ -64,6 +65,10 @@ export function Landing() {
   void tick;
 
   const [top, setTop] = useState<LadderRow[]>([]);
+  const [rei, setRei] = useState<string | null>(null);
+  useEffect(() => {
+    if (cloudEnabled) fetchLadderX1().then((rows) => setRei(rows[0]?.nick ?? null));
+  }, []);
   useEffect(() => {
     if (!cloudEnabled) return;
     fetchMyMmr()
@@ -116,6 +121,11 @@ export function Landing() {
               </li>
             ))}
           </ol>
+          {rei && (
+            <div className={styles.topTitle} style={{ marginTop: 8 }}>
+              👑 Rei do x1: <a href={`/u/${encodeURIComponent(rei)}`}>{rei}</a>
+            </div>
+          )}
         </footer>
       )}
     </div>

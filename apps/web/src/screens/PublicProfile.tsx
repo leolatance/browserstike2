@@ -23,6 +23,7 @@ interface PublicRow {
   career_rating: number | null;
   form: number | null;
   top100?: boolean;
+  rei_x1?: boolean;
 }
 
 /** Shareable page: anyone opens it without logging in. */
@@ -75,6 +76,7 @@ export function PublicProfile() {
               <span className={ui.muted}>
                 {row.country} · lvl {row.level} · {CLASS_LABEL[resolveBuild({ cards: row.build ?? [] }).activeClass]} · cor {COLOR_LABEL[row.color] ?? row.color}
                 {row.top100 && <span style={{ marginLeft: 6, color: 'var(--accent)', fontWeight: 800 }}>TOP 100 RATING</span>}
+                {row.rei_x1 && <span style={{ marginLeft: 6, color: 'var(--accent)', fontWeight: 800 }}>👑 REI DO X1</span>}
               </span>
             </div>
           </section>

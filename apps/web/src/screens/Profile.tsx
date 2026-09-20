@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db, type MatchRecord } from '../store/db';
+import { listX1, x1Badge } from '../store/x1';
 import { careerFromMatches } from '../store/matches';
 import { getCharacter, setColor, setPhoto } from '../store/character';
 import { PLAYER_COLORS } from '../store/db';
@@ -89,6 +90,7 @@ export function Profile() {
   };
   const { data: c } = useQuery(getCharacter);
   const { data: all } = useQuery(() => db.matches.toArray());
+  const { data: x1s } = useQuery(() => listX1(10));
   const { data: availablePassive } = useQuery(() => getSetting('availablePassive'));
   const cs = all ? careerFromMatches(all) : null;
   const last20: MatchRecord[] = all ? all.slice().sort((a, b) => b.playedAt - a.playedAt).slice(0, 20) : [];
@@ -222,6 +224,18 @@ export function Profile() {
             );
           })}
         </section>
+        {x1s && x1s.length > 0 && (
+          <section className={ui.card}>
+            <span className={ui.h2}>Últimos x1</span>
+            {x1s.map((h) => (
+              <div key={h.id} className={ui.row}>
+                <span className={`${styles.result} ${h.won ? styles.win : styles.loss}`}>{h.won ? 'V' : 'D'}</span>
+                <span>{x1Badge(h)}</span>
+                <span className={`mono ${ui.muted}`}>+{h.xp} xp{h.eloDelta !== undefined ? ` · ${h.eloDelta >= 0 ? '+' : ''}${h.eloDelta} Elo` : ''}</span>
+              </div>
+            ))}
+          </section>
+        )}
       </div>
     </Shell>
   );

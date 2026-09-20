@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { isEvent, type DuelEvent, type MatchEvent } from '@idle-strike/engine';
 import type { ReplayPlayer } from '../match/replay';
 import { DUEL_TARGET, DuelTargetGame, VARIANT_LABEL, type DuelTargetStats, type Variant } from './duelTarget';
+import { drawTarget } from './drawTarget';
 import styles from './DuelTargetPanel.module.css';
 
 interface Props {
@@ -91,105 +92,7 @@ export function DuelTargetPanel({ player, me, team, game, speed, onStats }: Prop
 
     const draw = () => {
       ctx.clearRect(0, 0, w, h);
-      const target = game.target;
-      if (!target) return;
-      const now = performance.now();
-      const since = now - target.spawnedAt;
-      const r = DUEL_TARGET.RADIUS * Math.min(w, h);
-      const x = target.x * w;
-      const y = target.y * h;
-      const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
-      const ok = getComputedStyle(document.documentElement).getPropertyValue('--ok').trim();
-      const text = getComputedStyle(document.documentElement).getPropertyValue('--text-0').trim();
-      const font = getComputedStyle(document.documentElement).getPropertyValue('--font');
-      if (target.variant === 'timing') {
-        // Sweeping bar with a green zone: tap when the cursor is inside.
-        const bx = w * 0.08, bw = w * 0.84, by = h * 0.5, bh = Math.max(14, h * 0.12);
-        ctx.fillStyle = 'rgba(255,255,255,0.08)';
-        ctx.fillRect(bx, by - bh / 2, bw, bh);
-        const zx = bx + (target.zoneAtMs / DUEL_TARGET.SWEEP_MS) * bw;
-        const zw = (DUEL_TARGET.ZONE_MS / DUEL_TARGET.SWEEP_MS) * bw;
-        ctx.fillStyle = ok;
-        ctx.fillRect(zx - zw / 2, by - bh / 2, zw, bh);
-        const cx = bx + Math.min(1, since / DUEL_TARGET.SWEEP_MS) * bw;
-        ctx.fillStyle = accent;
-        ctx.fillRect(cx - 2, by - bh, 4, bh * 2);
-        if (target.label) {
-          ctx.fillStyle = text;
-          ctx.font = `600 ${Math.max(10, Math.min(w, h) * 0.07)}px ${font}`;
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'top';
-          ctx.fillText(target.label, w / 2, by + bh + 6);
-        }
-        return;
-      }
-      if (target.variant === 'premira') {
-        // Corner silhouette with a head-height mark; the enemy pops out after appearAtMs.
-        ctx.fillStyle = 'rgba(255,255,255,0.06)';
-        ctx.fillRect(x + r * 0.6, 0, w - x, h);
-        ctx.fillStyle = 'rgba(255,255,255,0.12)';
-        ctx.fillRect(x + r * 0.6, 0, 3, h);
-        ctx.strokeStyle = accent;
-        ctx.lineWidth = 2;
-        ctx.setLineDash([4, 3]);
-        ctx.beginPath();
-        ctx.arc(x, y, r * 0.6, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.setLineDash([]);
-        ctx.beginPath();
-        ctx.moveTo(x - r, y);
-        ctx.lineTo(x + r, y);
-        ctx.stroke();
-        if (since >= target.appearAtMs) {
-          ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--enemy').trim();
-          ctx.beginPath();
-          ctx.arc(x, y, r * 0.45, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.fillRect(x - r * 0.35, y + r * 0.4, r * 0.7, r * 1.2);
-        }
-        if (target.label) {
-          ctx.fillStyle = text;
-          ctx.font = `600 ${Math.max(10, Math.min(w, h) * 0.07)}px ${font}`;
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'top';
-          ctx.fillText(target.label, x, y + r * 1.9);
-        }
-        return;
-      }
-      const life = Math.min(1, since / game.visibleMs);
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = accent;
-      ctx.beginPath();
-      ctx.arc(x, y, r, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(x, y, r * 0.55, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.fillStyle = accent;
-      ctx.beginPath();
-      ctx.arc(x, y, r * 0.18, 0, Math.PI * 2);
-      ctx.fill();
-      // Shrinking ring = time left.
-      ctx.globalAlpha = 0.5;
-      ctx.beginPath();
-      ctx.arc(x, y, r * (1.6 - 0.6 * life), 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.globalAlpha = 1;
-      if (target.label) {
-        ctx.fillStyle = text;
-        ctx.font = `600 ${Math.max(10, Math.min(w, h) * 0.07)}px ${font}`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'top';
-        ctx.fillText(target.label, x, y + r * 1.7);
-      }
-      if (target.variant === 'flash') {
-        // Flashed: white overlay fading over FLASH_MS.
-        const a = Math.max(0, 1 - since / DUEL_TARGET.FLASH_MS);
-        if (a > 0) {
-          ctx.fillStyle = `rgba(255,255,255,${a})`;
-          ctx.fillRect(0, 0, w, h);
-        }
-      }
+      if (game.target) drawTarget(ctx, w, h, game.target, performance.now(), game.visibleMs);
     };
 
     const onTick = () => {

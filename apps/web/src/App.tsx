@@ -19,6 +19,9 @@ import { QueueOnline } from './screens/QueueOnline';
 import { ResultOnline } from './screens/ResultOnline';
 import { Ranking } from './screens/Ranking';
 import { Landing } from './screens/Landing';
+import { X1Screen } from './screens/X1';
+import { X1Invite } from './screens/X1Invite';
+import { X1Online } from './screens/X1Online';
 
 /** '/': lobby with a character, landing without one. */
 function HomeGate() {
@@ -104,6 +107,16 @@ export function App() {
           }
         />
         <Route path="/ranking" element={<Ranking />} />
+        <Route
+          path="/x1"
+          element={
+            <RequireCharacter>
+              <X1Screen />
+            </RequireCharacter>
+          }
+        />
+        <Route path="/x1/convite/:code" element={<X1Invite />} />
+        <Route path="/x1/partida/:id" element={<X1Online />} />
         <Route path="/u/:nick" element={<PublicProfile />} />
         <Route
           path="/perfil"

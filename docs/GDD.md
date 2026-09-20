@@ -346,6 +346,7 @@ Carry perde menos, carregado ganha menos.
 ### 8.4 Rankings
 - **Patente**: ladder clássica, por temporada.
 - **Rating**: ladder por faixa de patente (padrão) e global normalizado pelo nível dos adversários. Filtros: temporada, mapa, role. Badges "Top 100 rating" no perfil.
+- **x1** `[v1.1]`: top 100 por Elo x1 (só x1 de build), aba própria em `/ranking`, sem temporada. O #1 ganha o badge **"Rei do x1"** no perfil público e na landing (linha abaixo do Top 5).
 
 ### 8.5 Temporada (Fase 2)
 30 dias. Reseta patente (soft reset: MMR → média com o centro). Rating de carreira, nível, cartas, cosméticos permanecem. Recompensa de fim de temporada por patente final e por posição no ranking de rating.
@@ -386,7 +387,15 @@ Layout mobile-first (vertical), reorganiza em desktop:
 Regra: **sincronizados ao sim, opcionais, só recompensa.** Score do minigame nunca altera o log.
 
 ### 10.1 Alvo de duelo (Fase 1)
-Quando o boneco do jogador entra num duelo (evento `duel`, 0,8s antes da resolução), um alvo aparece no canvas do minigame por 900ms. Clicar/tocar rápido e centrado = score alto: `0,6·reação (150ms=100 → 900ms=0) + 0,4·distância do centro`. Score do minigame = média dos duelos "acompanhados". O kill feed mostra o resultado do sim normalmente. Perfect = todos os duelos com score ≥ 85. O alvo mostra a `situation` do duelo como rótulo (flashado, clutch 1vN, trade, segurando ângulo) sem alterar o score. `[v1]` Ritmo: o boneco do jogador recebe **20–30 duelos por partida** (medido: ~26 com classes de bot; Rifler ~30, Âncora ~25). Em 4x o minigame desliga.
+Quando o boneco do jogador entra num duelo (evento `duel`, 0,8s antes da resolução), um alvo aparece no canvas do minigame por 900ms. Clicar/tocar rápido e centrado = score alto: `0,6·reação (150ms=100 → 900ms=0) + 0,4·distância do centro`. Score do minigame = média dos duelos "acompanhados". O kill feed mostra o resultado do sim normalmente. Perfect = todos os duelos com score ≥ 85. `[v1.1]` **Variantes por situação**, mesmo canvas, mesmo score, mesmo toggle, tudo é um toque: **timing** (o boneco inicia o duelo: barra varre em 1,2s, zona verde de 180ms, score pela distância ao centro da zona, zero a 400ms), **pré-mira** (segurando ângulo: silhueta de esquina com marca de cabeça, o inimigo aparece 300–700ms depois; toque na marca antes = 100, depois = pela reação), **flashado** (alvo normal com tela branca de 300ms desvanecendo), **alvo** (o resto). O rótulo do alvo é o nome da variante. Vale pra 5x5, x1 e treino (Peek usa timing porque o boneco é quem peeka). `[v1]` Ritmo: o boneco do jogador recebe **20–30 duelos por partida** (medido: ~26 com classes de bot; Rifler ~30, Âncora ~25). Em 4x o minigame desliga.
+
+### 10.1b x1 `[v1.1]`
+Série de duelos de mira no mid, **primeiro a 10**, alternando quem inicia (padrão de situações fixo pela seed: timing / pré-mira / alvo, simétrico entre os lados). Atributos + build dos dois contam com escala própria `ATTR_SCALE_X1 = 0,4` (gates em `test/x1.test.ts`: iguais 50% ±3, +10 de média → 70–76%; medido 51% / 73%). Motor: `packages/engine/src/x1.ts` (`simulateX1`), log no formato de partida (um round, `duel`/`kill`/`respawn`) — a tela de partida e o minigame reproduzem sem mudar nada.
+- **Contra bot** (local, sem conta): `/x1`, dificuldade pelo nível do bot (igual, +5, +10 na média), radar recortado no mid, placar 0–10, minigame em **todos** os duelos. XP pela fórmula da partida com base **25**. Histórico em tabela própria (`x1`), fora da carreira 5x5.
+- **Online, por convite** (nick ou link `/x1/convite/:code`): rendezvous por Supabase Realtime (canal por partida, presença); aceitar chama a edge function `x1_create` que sorteia a seed, grava `x1_matches` e marca `start_at = agora + 3s` no relógio do servidor; os dois clientes rodam a mesma sim local e começam sincronizados pelo relógio do servidor (offset estimado a cada chamada, RTT/2). Se um cair, o outro ganha por **W.O. após 20s**.
+  - **x1 de build**: a sim decide; cada um faz o minigame em paralelo e vê o score do outro ao vivo no header. Resultado → `ladder_x1` (Elo próprio, **K=30**, sem amortecimento) + XP fixo (40/20).
+  - **x1 de mira**: o minigame **é** o duelo. 10 rodadas (desempate até 6 extras), mesmo alvo pros dois (id da partida + rodada → mesma posição/zona), cada cliente manda reação+distância no canal; a rodada vai pro maior score, empate = quem tocou antes (timestamp estimado do servidor); sem toque = 0. Sem ladder, XP fixo (15/10), badge "x1 de mira: 7–3 vs fulano" no histórico. Tela: dois alvos lado a lado (o meu ativo, o dele espelhado com a marca de onde/quando tocou).
+  - Ambos: tela final com placar e **revanche** (novo convite pro adversário pelo canal).
 
 ### 10.2 Ritmo (Fase 3) — estilo osu
 Sequência de alvos no ritmo da partida (eco = calmo, retake = intenso).

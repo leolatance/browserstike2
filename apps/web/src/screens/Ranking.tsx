@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { fetchLadderX1, fetchMyX1, type X1LadderRow } from '../x1/online';
 import { RANKS, rankOf } from '@idle-strike/engine';
 import { fetchLadder, fetchMyMmr, type LadderRow } from '../store/online';
 import { getCharacter } from '../store/character';
@@ -9,11 +11,17 @@ import { Shell } from '../ui/Shell';
 import ui from '../ui/ui.module.css';
 import styles from './Ranking.module.css';
 
-type Tab = 'rating' | 'mmr';
+type Tab = 'rating' | 'mmr' | 'x1';
 
 /** Ladders (materialized views refreshed every 5 min by pg_cron). */
 export function Ranking() {
-  const [tab, setTab] = useState<Tab>('rating');
+  const [params] = useSearchParams();
+  const [tab, setTab] = useState<Tab>(params.get('tab') === 'x1' ? 'x1' : 'rating');
+  const [x1Rows, setX1Rows] = useState<X1LadderRow[]>([]);
+  const { data: myX1 } = useQuery(fetchMyX1);
+  useEffect(() => {
+    if (cloudEnabled && tab === 'x1') fetchLadderX1().then(setX1Rows);
+  }, [tab]);
   const [global, setGlobal] = useState(false);
   const [tier, setTier] = useState<number | 'all'>('all');
   const [rows, setRows] = useState<LadderRow[]>([]);
@@ -26,7 +34,7 @@ export function Ranking() {
     fetchMyMmr().then(async (m) => {
       const s = m?.seasonId ?? null;
       setSeason(s);
-      if (s) setRows(await fetchLadder(tab, s, global));
+      if (s && tab !== 'x1') setRows(await fetchLadder(tab, s, global));
     });
   }, [tab, global]);
 
@@ -49,13 +57,17 @@ export function Ranking() {
             <button aria-pressed={tab === 'mmr'} onClick={() => setTab('mmr')}>
               Patente
             </button>
+            <button aria-pressed={tab === 'x1'} onClick={() => setTab('x1')}>
+              x1
+            </button>
             {tab === 'rating' && (
               <button aria-pressed={global} onClick={() => setGlobal((v) => !v)}>
                 {global ? 'global (normalizado)' : 'por faixa'}
               </button>
             )}
-            <span className={ui.muted}>temporada {season ?? '…'} · atualiza a cada 5 min</span>
+            <span className={ui.muted}>{tab === 'x1' ? 'Elo x1 de build · K=30 · ao vivo' : `temporada ${season ?? '…'} · atualiza a cada 5 min`}</span>
           </div>
+          {tab !== 'x1' && (
           <div className={ui.row}>
             <button aria-pressed={tier === 'all'} onClick={() => setTier('all')}>
               todas as faixas
@@ -66,7 +78,29 @@ export function Ranking() {
               </button>
             ))}
           </div>
+          )}
         </section>
+        {tab === 'x1' && (
+          <section className={ui.card}>
+            {x1Rows.length === 0 && <span className={ui.muted}>Ninguém no ladder x1 ainda. Chame um amigo pro x1 de build.</span>}
+            {x1Rows.map((r) => (
+              <div key={r.nick} className={styles.row}>
+                <span className={`${styles.pos} mono`}>{r.pos}</span>
+                <span style={{ width: 22, textAlign: 'center' }}>{r.pos === 1 ? '👑' : ''}</span>
+                <a className={styles.nick} href={`/u/${encodeURIComponent(r.nick)}`}>
+                  {r.nick}
+                  {r.pos === 1 && <span style={{ marginLeft: 6, color: 'var(--accent)', fontSize: 11, fontWeight: 800 }}>REI DO X1</span>}
+                </a>
+                <span className={`mono ${styles.val}`}>{r.elo}</span>
+                <span className={`mono ${styles.n}`}>
+                  {r.wins}/{r.matches}
+                </span>
+              </div>
+            ))}
+            {myX1 && <div className={ui.muted}>você: {myX1.elo} Elo · {myX1.wins}/{myX1.matches}</div>}
+          </section>
+        )}
+        {tab !== 'x1' && (
         <section className={ui.card}>
           {filtered.length === 0 && <span className={ui.muted}>Ninguém aqui ainda (mínimo 3 partidas online para o rating; a view atualiza a cada 5 min).</span>}
           {filtered.map((r) => (
@@ -81,6 +115,7 @@ export function Ranking() {
             </div>
           ))}
         </section>
+        )}
         <div className={styles.footer}>
           {c && mine && (
             <>

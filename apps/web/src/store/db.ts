@@ -79,6 +79,27 @@ export interface MatchRecord {
   mode?: 'solo' | 'online';
 }
 
+/** x1 history (bot, build or mira). Separate from 5x5 matches so career stats stay pure. */
+export interface X1Record {
+  id?: number;
+  playedAt: number;
+  kind: 'bot' | 'build' | 'mira';
+  opponent: string;
+  /** [me, opponent] */
+  score: [number, number];
+  won: boolean;
+  xp: number;
+  /** Elo change on the x1 ladder (build only). */
+  eloDelta?: number;
+  minigame: DuelTargetStats | null;
+  /** Bot difficulty (bot only): 0, +5 or +10. */
+  delta?: number;
+  /** Server match id (online). */
+  cloudId?: number;
+  /** Walkover. */
+  wo?: boolean;
+}
+
 export interface TrainingRecord {
   id?: number;
   /** Local calendar day, YYYY-MM-DD. */
@@ -104,6 +125,7 @@ export class IdleStrikeDB extends Dexie {
   settings!: Table<SettingsRecord, string>;
   cards!: Table<CardRecord, string>;
   boxes!: Table<BoxRecord, number>;
+  x1!: Table<X1Record, number>;
 
   constructor() {
     super('idle-strike-2');
@@ -155,6 +177,8 @@ export class IdleStrikeDB extends Dexie {
       );
     // v5: sync bookkeeping (cloudId index on matches).
     this.version(5).stores({ matches: '++id, playedAt, cloudId' });
+    // v6: x1 history.
+    this.version(6).stores({ x1: '++id, playedAt' });
   }
 }
 

@@ -10,6 +10,7 @@ import { useSession } from '../store/auth';
 import { cloudEnabled } from '../store/supabase';
 import { fetchMyMmr, markSeen, unseenPassive, type PassiveRow } from '../store/online';
 import { setPendingMatch } from '../store/pending';
+import { watchInbox, type InboxInvite } from '../x1/online';
 import { useNavigate } from 'react-router-dom';
 import { card } from '@idle-strike/engine';
 import { RankIcon } from '../ui/RankIcon';
@@ -39,6 +40,11 @@ export function Lobby() {
   const { data: mine } = useQuery(() => (session ? fetchMyMmr() : Promise.resolve(null)), [session?.user.id]);
   const nav = useNavigate();
   const [passive, setPassive] = useState<PassiveRow[]>([]);
+  const [invites, setInvites] = useState<InboxInvite[]>([]);
+  useEffect(() => {
+    if (!session || !c) return;
+    return watchInbox(c.nick, setInvites);
+  }, [session, c?.nick]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!session) return;
     unseenPassive().then(setPassive);
@@ -94,6 +100,12 @@ export function Lobby() {
             <span>entre com e-mail ou Google pra guardar o boneco na nuvem e jogar a queue online</span>
           </Link>
         )}
+        {invites.map((inv) => (
+          <Link key={inv.code} to={`/x1/convite/${inv.code}`} className={styles.notice}>
+            <b>{inv.hostNick} te chamou pro {inv.kind === 'mira' ? 'x1 de mira' : 'x1 de build'}</b>
+            <span>toca pra ver o convite</span>
+          </Link>
+        ))}
         {passive.length > 0 && (
           <section className={ui.card}>
             <span className={ui.h2}>Enquanto você tava fora · {passive.length} {passive.length === 1 ? 'partida' : 'partidas'}</span>
@@ -186,6 +198,10 @@ export function Lobby() {
               <span>precisa de conta</span>
             </Link>
           )}
+          <Link to="/x1" className={styles.action}>
+            <b>x1</b>
+            <span>contra bot · amigo · ranking</span>
+          </Link>
           <Link to="/build" className={styles.action}>
             <b>Build</b>
             <span>{build?.length ?? 0} cartas equipadas</span>
