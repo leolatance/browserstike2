@@ -27,7 +27,7 @@ Copie `.env.example` pra `apps/web/.env.local` com a URL e a anon key de um proj
 packages/engine/   simulação determinística em TS puro (seed → log de eventos); dados de jogo em data/
 apps/web/          React + Vite PWA: telas, radar em canvas, minigames, Dexie, cliente Supabase
 supabase/          migrações SQL, edge functions (Deno) e o README pra subir seu projeto
-docs/              GDD.md (cânone do jogo), SKINS.md, imagens
+docs/              GDD.md (cânone do jogo), imagens
 scripts/           bundle do engine pra Deno, OG image
 .github/           CI, template de PR, rascunhos das issues iniciais
 ```
@@ -41,7 +41,7 @@ scripts/           bundle do engine pra Deno, OG image
 
 ## Onde eu travei
 
-Motor, online e progressão eu consegui tocar. Onde travei foi no visual das skins: tenho 17 padrões prontos ([docs/SKINS.md](docs/SKINS.md)), gerei renders por IA e não gostei do resultado. A direção de arte das skins está em aberto — se você tem olho pra isso, a issue é sua.
+Motor, online e progressão eu consegui tocar. Onde travei foi nas skins: é a parte visual, e virou uma objeção na minha cabeça antes mesmo de começar — não tem nada de skin no projeto ainda, nem padrão, nem render. A direção de arte das skins está em aberto — se você tem olho pra isso, a issue é sua.
 
 Também aceito ajuda em: arte das 30 cartas, ícones das 10 patentes (SVG), um segundo mapa.
 
