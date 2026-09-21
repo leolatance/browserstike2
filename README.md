@@ -9,8 +9,8 @@ Jogar: **<https://browserstrike2.vercel.app>**
 ## Rodar local
 
 ```bash
-git clone https://github.com/leolatance/browserstrike2.git
-cd browserstrike2
+git clone https://github.com/leolatance/browserstike2.git
+cd browserstike2
 npm i
 npm run dev
 ```

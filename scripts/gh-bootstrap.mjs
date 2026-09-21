@@ -13,7 +13,7 @@ import { join } from 'node:path';
 const args = process.argv.slice(2);
 const flag = (n) => args.includes(n);
 const opt = (n, d) => (args.includes(n) ? args[args.indexOf(n) + 1] : d);
-const repo = opt('--repo', 'leolatance/browserstrike2');
+const repo = opt('--repo', 'leolatance/browserstike2');
 const dry = flag('--dry');
 const gh = (...a) => {
   console.log('$ gh', a.join(' '));
