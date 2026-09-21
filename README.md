@@ -41,9 +41,9 @@ scripts/           bundle do engine pra Deno, OG image
 
 ## Onde eu travei
 
-Motor, online e progressão eu consegui tocar. Onde travei foi nas skins: é a parte visual, e virou uma objeção na minha cabeça antes mesmo de começar — não tem nada de skin no projeto ainda, nem padrão, nem render. A direção de arte das skins está em aberto — se você tem olho pra isso, a issue é sua.
+Motor, online e progressão estão de pé. O que não está: **skins**. Não existe nenhum asset, padrão ou pipeline de skin no projeto; os ícones de arma são SVGs simples em `apps/web/src/match/WeaponIcon.tsx`. Precisa de alguém que defina a direção de arte (estilo, paleta, como a raridade aparece) e mostre 2–3 padrões aplicados em duas armas, em dois tamanhos (kill feed ~24px, inventário ~200px), antes de qualquer produção em escala. Issue fixada: [#1](https://github.com/leolatance/browserstike2/issues/1).
 
-Também aceito ajuda em: arte das 30 cartas, ícones das 10 patentes (SVG), um segundo mapa.
+Outras frentes abertas: arte das 30 cartas, ícones das 10 patentes (SVG), um segundo mapa (`MapDef` com testes de conectividade e balance nos dois mapas).
 
 ## Licença
 
