@@ -57,4 +57,4 @@ GitHub Project **Roadmap**: <https://github.com/users/leolatance/projects/1> —
 
 ## Pra quem mantém: proteção da `main`
 
-Em **Settings → Branches → Add branch ruleset** (ou *branch protection rule*) pra `main`: exigir pull request antes de merge, exigir status checks (`typecheck · engine (sem balance) · web · build`, `edge functions (Deno)`, `CLA aceito no PR`), bloquear force-push. Deploy continua manual, só por `vercel deploy --prod` do autor — a Vercel **não** é conectada ao GitHub.
+Em **Settings → Branches → Add branch ruleset** (ou *branch protection rule*) pra `main`: exigir pull request antes de merge, exigir status checks (`typecheck · engine (sem balance) · web · build`, `edge functions (Deno)`, `CLA aceito no PR`), bloquear force-push. A Vercel está conectada ao GitHub: merge na `main` vai pro ar sozinho, e cada PR ganha um preview. Se um merge quebrar produção, reverte o PR e a Vercel republica.
