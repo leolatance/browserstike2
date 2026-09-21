@@ -53,7 +53,7 @@ Formalmente: o código está sob a [PolyForm Noncommercial 1.0.0](LICENSE) — p
 
 ## Roadmap
 
-GitHub Project **Roadmap**: <https://github.com/users/leolatance/projects> — as issues iniciais estão em [.github/ISSUE_DRAFTS](.github/ISSUE_DRAFTS).
+GitHub Project **Roadmap**: <https://github.com/users/leolatance/projects/1> — as issues iniciais estão em [.github/ISSUE_DRAFTS](.github/ISSUE_DRAFTS).
 
 ## Pra quem mantém: proteção da `main`
 
