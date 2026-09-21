@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { CLASS_LABEL, SET_BONUS_TEXT, SET_SIZE, card, resolveBuild, setProgress, slotsForLevel, type EquippedCard, type PlayerClass } from '@idle-strike/engine';
 import { currentBuild, listCards, saveBuild } from '../store/cards';
 import { getCharacter } from '../store/character';
@@ -15,6 +15,10 @@ export function BuildScreen() {
   const { data: saved } = useQuery(currentBuild);
   const [build, setBuild] = useState<EquippedCard[] | null>(null);
   const [picking, setPicking] = useState<number | null>(null);
+  const nav = useNavigate();
+  const [params] = useSearchParams();
+  // First visit (right after the initial box): the screen is a step, not a destination.
+  const first = params.get('first') === '1';
 
   useEffect(() => {
     if (saved && build === null) setBuild(saved);
@@ -102,6 +106,13 @@ export function BuildScreen() {
               <CardView key={r.id} card={card(r.id)} level={r.level} small onClick={() => equip(picking ?? cards.length, r.id)} dimmed={picking === null && cards.length >= slots} />
             ))}
           </div>
+        </section>
+
+        <section className={ui.card}>
+          {first && <span className={ui.muted}>Equipou o que quis? Dá pra voltar aqui pelo lobby a qualquer hora.</span>}
+          <button className={`primary ${ui.big}`} onClick={() => nav('/lobby')}>
+            {first ? 'Pronto · bora jogar →' : 'Voltar ao lobby'}
+          </button>
         </section>
       </div>
     </Shell>

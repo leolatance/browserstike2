@@ -44,7 +44,7 @@ export function Onboarding() {
     return (
       <div className={ui.page}>
         <h1 className={ui.h1}>Box inicial</h1>
-        <BoxOpen reveals={reveals} title="Box inicial" onDone={() => nav('/build', { replace: true })} />
+        <BoxOpen reveals={reveals} title="Box inicial" onDone={() => nav('/build?first=1', { replace: true })} />
       </div>
     );
   }
