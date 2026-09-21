@@ -1,0 +1,47 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  checks:
+    name: typecheck · engine (sem balance) · web · build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run test:fast -w @idle-strike/engine
+      - run: npm run test -w @idle-strike/web
+      - run: npm run build -w @idle-strike/web
+
+  deno:
+    name: edge functions (Deno)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - run: deno test --allow-all supabase/functions
+
+  cla:
+    name: CLA aceito no PR
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Procurar o checkbox marcado no corpo do PR
+        env:
+          BODY: ${{ github.event.pull_request.body }}
+        run: |
+          if printf '%s\n' "$BODY" | grep -qiE '^\s*[-*]\s*\[x\]\s*li e concordo com o (\[)?cla\.md'; then
+            echo "CLA ok"
+          else
+            echo "::error::Marque o checkbox 'Li e concordo com o CLA.md' na descrição do PR."
+            exit 1
+          fi

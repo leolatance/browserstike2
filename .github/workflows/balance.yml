@@ -1,0 +1,19 @@
+name: Balance completo
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * *' # diário, 03:00 em Brasília
+
+jobs:
+  balance:
+    name: 5.000 partidas por cenário + gates de cartas
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run test:balance -w @idle-strike/engine
