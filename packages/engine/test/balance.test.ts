@@ -13,7 +13,8 @@ import { Rng } from '../src/rng';
 import { simulateRound } from '../src/round';
 import { botTeams, roundTeam } from './helpers';
 
-const N = 5000;
+/** Matches per scenario. BALANCE_N=1500 is a smoke run (~1 min); the gates are calibrated for 5000. */
+const N = Number(process.env.BALANCE_N) || 5000;
 
 interface Summary {
   winner: 0 | 1;
@@ -169,7 +170,7 @@ describe.concurrent('balance (GDD 5.8)', () => {
 // noise, so n = 1000 is enough. Win rate is logged only as a diagnostic.
 // ---------------------------------------------------------------------------
 const CHAR_AVG = 26; // level-0 character (attrs rolled 22–30)
-const N_CARDS = 1000;
+const N_CARDS = Number(process.env.BALANCE_N_CARDS) || 1000;
 
 function charMatch(seed: number, build: Build): MatchConfig {
   const rng = new Rng(seed);

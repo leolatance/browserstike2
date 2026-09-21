@@ -11,7 +11,10 @@
     "test": "npm run test -w @idle-strike/engine && npm run test -w @idle-strike/web",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "dev": "npm run dev -w @idle-strike/web",
-    "build": "npm run build --workspaces --if-present"
+    "build": "npm run build --workspaces --if-present",
+    "test:fast": "npm run test:fast -w @idle-strike/engine && npm run test -w @idle-strike/web",
+    "test:balance": "npm run test:balance -w @idle-strike/engine",
+    "test:deno": "npx deno test --allow-all supabase/functions"
   },
   "devDependencies": {
     "deno-bin": "^2.2.7"
